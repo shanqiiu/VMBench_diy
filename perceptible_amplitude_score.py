@@ -212,7 +212,10 @@ def visualize_tracks(video, tracks, visibility, output_path, grid_size=30):
     # 保存可视化视频
     if vis_frames_tensor.numel() > 0:
         # Convert tensor to numpy array and reshape to (T, H, W, C)
-        vis_frames_np = vis_frames_tensor.squeeze(0).permute(0, 2, 3, 1).cpu().numpy()
+        if vis_frames_tensor.shape[0] == 1:
+            vis_frames_np = vis_frames_tensor.squeeze(0).permute(0, 2, 3, 1).cpu().numpy()
+        else:
+            vis_frames_np = vis_frames_tensor[0].permute(0, 2, 3, 1).cpu().numpy()
         
         height, width = vis_frames_np[0].shape[:2]
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
@@ -399,8 +402,13 @@ if __name__ == "__main__":
             # 可视化分割掩码
             if args.save_visualization and args.vis_masks:
                 vis_masks_path = os.path.join(args.output_vis_dir, f"masks_{meta_info['index']}.jpg")
-                # SAM returns masks with shape (batch_size, num_masks, H, W), squeeze batch dimension
-                masks_np = masks.cpu().numpy().squeeze(0)  # Remove batch dimension: (num_masks, H, W)
+                # SAM returns masks with shape (batch_size, num_masks, H, W), safely remove batch dimension
+                masks_np = masks.cpu().numpy()
+                if masks_np.shape[0] == 1:
+                    masks_np = masks_np.squeeze(0)  # Remove batch dimension: (num_masks, H, W)
+                else:
+                    # If batch size > 1, take the first batch
+                    masks_np = masks_np[0]
                 visualize_masks(image_array, masks_np, vis_masks_path)
 
         # load the input video frame by frame
