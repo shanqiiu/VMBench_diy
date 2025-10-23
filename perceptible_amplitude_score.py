@@ -319,7 +319,7 @@ def visualize_motion_analysis(image, background_mask, subject_mask,
     plt.close()
 
 
-def save_detailed_motion_scores(meta_info, background_motion, subject_motion, has_subject, video_width=None, video_height=None):
+def save_detailed_motion_scores(meta_info, background_motion, subject_motion, has_subject, video_width=None, video_height=None, status="normal", error_reason=None):
     """保存详细的运动分数"""
     if has_subject:
         pure_subject = max(0, subject_motion - background_motion)
@@ -350,6 +350,11 @@ def save_detailed_motion_scores(meta_info, background_motion, subject_motion, ha
             'diagonal': float(torch.sqrt(torch.tensor(video_width**2 + video_height**2)).item()),
             'normalized_to_1080p': True
         }
+    
+    # Add status information
+    motion_score['status'] = status
+    if error_reason:
+        motion_score['error_reason'] = error_reason
     
     meta_info['perceptible_amplitude_score'] = motion_score
 
@@ -505,7 +510,8 @@ if __name__ == "__main__":
             
             if not subject_mask_valid:
                 subject_motion_degree = 0.0
-                save_detailed_motion_scores(meta_info, background_motion_degree, subject_motion_degree, False, video_width, video_height)
+                save_detailed_motion_scores(meta_info, background_motion_degree, subject_motion_degree, False, video_width, video_height, 
+                                          status="error", error_reason="subject_mask_empty")
             elif not mask_suitable:
                 print(f"Warning: Mask unsuitable for tracking in video {meta_info['index']}")
                 mask_area = torch.sum(subject_mask > 0).item()
@@ -514,7 +520,8 @@ if __name__ == "__main__":
                 print(f"  Grid size: {args.grid_size}")
                 print(f"  Mask too small for effective tracking")
                 subject_motion_degree = 0.0
-                save_detailed_motion_scores(meta_info, background_motion_degree, subject_motion_degree, False, video_width, video_height)
+                save_detailed_motion_scores(meta_info, background_motion_degree, subject_motion_degree, False, video_width, video_height,
+                                          status="error", error_reason="mask_too_small")
             else:
                 pred_tracks, pred_visibility = cotracker_model(
                     video,
@@ -537,14 +544,17 @@ if __name__ == "__main__":
                     print(f"    - Subject too static or moving too fast")
                     print(f"    - Co-Tracker algorithm limitations")
                     subject_motion_degree = 0.0
+                    save_detailed_motion_scores(meta_info, background_motion_degree, subject_motion_degree, True, video_width, video_height,
+                                              status="error", error_reason="empty_tracks")
                 else:
                     subject_motion_degree = calculate_motion_degree(pred_tracks, video_width, video_height).item()
+                    save_detailed_motion_scores(meta_info, background_motion_degree, subject_motion_degree, True, video_width, video_height,
+                                              status="normal")
 
                 if args.save_visualization and args.vis_tracks and subject_mask_valid and pred_tracks.shape[2] > 0:
                     vis_subject_tracks_path = os.path.join(args.output_vis_dir, f"subject_tracks_{meta_info['index']}.mp4")
                     visualize_tracks(video, pred_tracks, pred_visibility, vis_subject_tracks_path, args.grid_size)
 
-                save_detailed_motion_scores(meta_info, background_motion_degree, subject_motion_degree, True, video_width, video_height)
             
                 if args.save_visualization and args.vis_analysis and subject_mask_valid:
                     vis_analysis_path = os.path.join(args.output_vis_dir, f"motion_analysis_{meta_info['index']}.png")
@@ -577,7 +587,8 @@ if __name__ == "__main__":
                                             subject_motion_degree,
                                             vis_analysis_path)
         else:
-            save_detailed_motion_scores(meta_info, background_motion_degree, 0, False, video_width, video_height)
+            save_detailed_motion_scores(meta_info, background_motion_degree, 0, False, video_width, video_height,
+                                      status="error", error_reason="no_subject_detected")
 
         with open(args.meta_info_path, 'w') as f:
             json.dump(meta_infos, f, indent=4)
