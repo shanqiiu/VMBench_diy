@@ -150,22 +150,22 @@ def calculate_motion_degree(keypoints, video_width, video_height):
 
 
 def visualize_detection(image, boxes, labels, output_path):
-    """¿ÉÊÓ»¯¶ÔÏó¼ì²â½á¹û"""
+    """å¯è§†åŒ–å¯¹è±¡æ£€æµ‹ç»“æœ"""
     vis_image = image.copy()
     
-    # ¼ì²éÊÇ·ñÓĞ¼ì²â½á¹û
+    # æ£€æŸ¥æ˜¯å¦æœ‰æ£€æµ‹ç»“æœ
     if len(boxes) == 0:
-        # Èç¹ûÃ»ÓĞ¼ì²âµ½¶ÔÏó£¬Ìí¼ÓÎÄ±¾ËµÃ÷
+        # å¦‚æœæ²¡æœ‰æ£€æµ‹åˆ°å¯¹è±¡ï¼Œæ·»åŠ æ–‡æœ¬è¯´æ˜
         cv2.putText(vis_image, "No objects detected", (50, 50), 
                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
     else:
-        # »æÖÆ¼ì²âµ½µÄ¶ÔÏó
+        # ç»˜åˆ¶æ£€æµ‹åˆ°çš„å¯¹è±¡
         for i, (box, label) in enumerate(zip(boxes, labels)):
-            # »æÖÆ±ß½ç¿ò
+            # ç»˜åˆ¶è¾¹ç•Œæ¡†
             x1, y1, x2, y2 = box.int().tolist()
             cv2.rectangle(vis_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
             
-            # »æÖÆ±êÇ©
+            # ç»˜åˆ¶æ ‡ç­¾
             cv2.putText(vis_image, f"{label}", (x1, y1-10), 
                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
     
@@ -174,7 +174,7 @@ def visualize_detection(image, boxes, labels, output_path):
 
 
 def visualize_masks(image, masks, output_path, alpha=0.5):
-    """¿ÉÊÓ»¯·Ö¸îÑÚÂë"""
+    """å¯è§†åŒ–åˆ†å‰²æ©ç """
     vis_image = image.copy()
     colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 0, 255)]
     
@@ -204,12 +204,12 @@ def visualize_masks(image, masks, output_path, alpha=0.5):
 
 
 def visualize_tracks(video, tracks, visibility, output_path, grid_size=30):
-    """¿ÉÊÓ»¯ÔË¶¯¹ì¼£"""
-    # ½ûÓÃ×Ô¶¯±£´æ£¬ÎÒÃÇÊÖ¶¯±£´æµ½Ö¸¶¨Â·¾¶
+    """å¯è§†åŒ–è¿åŠ¨è½¨è¿¹"""
+    # ç¦ç”¨è‡ªåŠ¨ä¿å­˜ï¼Œæˆ‘ä»¬æ‰‹åŠ¨ä¿å­˜åˆ°æŒ‡å®šè·¯å¾„
     visualizer = Visualizer(save_dir=None)
     vis_frames_tensor = visualizer.visualize(video, tracks, visibility, save_video=False)
     
-    # ±£´æ¿ÉÊÓ»¯ÊÓÆµ
+    # ä¿å­˜å¯è§†åŒ–è§†é¢‘
     if vis_frames_tensor.numel() > 0:
         # Convert tensor to numpy array and reshape to (T, H, W, C)
         if vis_frames_tensor.shape[0] == 1:
@@ -238,23 +238,23 @@ def visualize_tracks(video, tracks, visibility, output_path, grid_size=30):
 def visualize_motion_analysis(image, background_mask, subject_mask, 
                              background_motion, subject_motion, 
                              output_path):
-    """¿ÉÊÓ»¯ÔË¶¯·ÖÎö½á¹û"""
+    """å¯è§†åŒ–è¿åŠ¨åˆ†æç»“æœ"""
     fig, axes = plt.subplots(2, 2, figsize=(12, 10))   
     axes[0, 0].imshow(image)
     axes[0, 0].set_title('Original Image')
     axes[0, 0].axis('off')
     
-    # ±³¾°ÑÚÂë
+    # èƒŒæ™¯æ©ç 
     axes[0, 1].imshow(background_mask, cmap='gray')
     axes[0, 1].set_title(f'Background Mask\nMotion: {background_motion:.4f}')
     axes[0, 1].axis('off')
     
-    # Ö÷ÌåÑÚÂë
+    # ä¸»ä½“æ©ç 
     axes[1, 0].imshow(subject_mask, cmap='gray')
     axes[1, 0].set_title(f'Subject Mask\nMotion: {subject_motion:.4f}')
     axes[1, 0].axis('off')
     
-    # ÔË¶¯·ÖÎö
+    # è¿åŠ¨åˆ†æ
     motion_data = {
         'Background Motion': background_motion,
         'Subject Motion': subject_motion,
@@ -265,7 +265,7 @@ def visualize_motion_analysis(image, background_mask, subject_mask,
     axes[1, 1].set_title('Motion Analysis')
     axes[1, 1].set_ylabel('Motion Amplitude')
     
-    # Ìí¼ÓÊıÖµ±êÇ©
+    # æ·»åŠ æ•°å€¼æ ‡ç­¾
     for bar, value in zip(bars, motion_data.values()):
         axes[1, 1].text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.001,
                         f'{value:.4f}', ha='center', va='bottom')
@@ -276,7 +276,7 @@ def visualize_motion_analysis(image, background_mask, subject_mask,
 
 
 def save_detailed_motion_scores(meta_info, background_motion, subject_motion, has_subject):
-    """±£´æÏêÏ¸µÄÔË¶¯·ÖÊı"""
+    """ä¿å­˜è¯¦ç»†çš„è¿åŠ¨åˆ†æ•°"""
     if has_subject:
         pure_subject = max(0, subject_motion - background_motion)
         total_motion = background_motion + subject_motion
@@ -313,7 +313,7 @@ if __name__ == "__main__":
     parser.add_argument("--grid_size", type=int, default=30, help="Regular grid size")
     parser.add_argument("--device", type=str, default="cuda", help="running on cpu only!, default=False")
     
-    # ĞÂÔö¿ÉÊÓ»¯²ÎÊı
+    # æ–°å¢å¯è§†åŒ–å‚æ•°
     parser.add_argument("--save_visualization", action="store_true", help="Save visualization results")
     parser.add_argument("--output_vis_dir", type=str, default="./vis_results", help="Output directory for visualizations")
     parser.add_argument("--vis_detection", action="store_true", help="Visualize object detection")
@@ -333,7 +333,7 @@ if __name__ == "__main__":
 
     device = args.device
 
-    # ´´½¨¿ÉÊÓ»¯Êä³öÄ¿Â¼
+    # åˆ›å»ºå¯è§†åŒ–è¾“å‡ºç›®å½•
     if args.save_visualization:
         os.makedirs(args.output_vis_dir, exist_ok=True)
         print(f"Visualization results will be saved to: {args.output_vis_dir}")
@@ -366,12 +366,12 @@ if __name__ == "__main__":
             grounding_model, image, text_prompt, args.box_threshold, args.text_threshold, device=device
         )
 
-        # ¿ÉÊÓ»¯¼ì²â½á¹û
+        # å¯è§†åŒ–æ£€æµ‹ç»“æœ
         if args.save_visualization and args.vis_detection:
             vis_detection_path = os.path.join(args.output_vis_dir, f"detection_{meta_info['index']}.jpg")
             visualize_detection(image_array, boxes_filt, pred_phrases, vis_detection_path)
 
-        # ³õÊ¼»¯masks±äÁ¿£¬±ÜÃâÎ´¶¨Òå´íÎó
+        # åˆå§‹åŒ–maskså˜é‡ï¼Œé¿å…æœªå®šä¹‰é”™è¯¯
         masks = None
         
         # no detect object
@@ -399,7 +399,7 @@ if __name__ == "__main__":
                 multimask_output = False,
             )
 
-            # ¿ÉÊÓ»¯·Ö¸îÑÚÂë
+            # å¯è§†åŒ–åˆ†å‰²æ©ç 
             if args.save_visualization and args.vis_masks:
                 vis_masks_path = os.path.join(args.output_vis_dir, f"masks_{meta_info['index']}.jpg")
                 # SAM returns masks with shape (batch_size, num_masks, H, W), safely remove batch dimension
@@ -424,11 +424,11 @@ if __name__ == "__main__":
         # eval background (camera) motion degree
         background_mask = background_mask.unsqueeze(0)
         
-        # µ÷ÊÔĞÅÏ¢
-        print(f"? µ÷ÊÔĞÅÏ¢ - ÊÓÆµ: {meta_info['index']}")
-        print(f"  ÊÓÆµĞÎ×´: {video.shape}")
-        print(f"  ±³¾°ÑÚÂëĞÎ×´: {background_mask.shape}")
-        print(f"  ±³¾°ÑÚÂë·ÇÁãÏñËØÊı: {torch.sum(background_mask > 0).item()}")
+        # è°ƒè¯•ä¿¡æ¯
+        print(f"? è°ƒè¯•ä¿¡æ¯ - è§†é¢‘: {meta_info['index']}")
+        print(f"  è§†é¢‘å½¢çŠ¶: {video.shape}")
+        print(f"  èƒŒæ™¯æ©ç å½¢çŠ¶: {background_mask.shape}")
+        print(f"  èƒŒæ™¯æ©ç éé›¶åƒç´ æ•°: {torch.sum(background_mask > 0).item()}")
         print(f"  grid_size: {args.grid_size}")
         
         pred_tracks, pred_visibility = cotracker_model(
@@ -439,24 +439,24 @@ if __name__ == "__main__":
             segm_mask=background_mask
         )
         
-        # µ÷ÊÔÊä³ö
-        print(f"  pred_tracksĞÎ×´: {pred_tracks.shape}")
-        print(f"  pred_visibilityĞÎ×´: {pred_visibility.shape}")
+        # è°ƒè¯•è¾“å‡º
+        print(f"  pred_trackså½¢çŠ¶: {pred_tracks.shape}")
+        print(f"  pred_visibilityå½¢çŠ¶: {pred_visibility.shape}")
         
-        # ¼ì²éÊÇ·ñÎª¿Õ»òÒì³£
+        # æ£€æŸ¥æ˜¯å¦ä¸ºç©ºæˆ–å¼‚å¸¸
         if pred_tracks.shape[2] == 0:
-            print(f"  ??  ¾¯¸æ: Ê±¼äÎ¬¶ÈÎª0£¬¿ÉÄÜÔ­Òò:")
-            print(f"     - ÊÓÆµÖ¡Êı²»×ã: {video.shape[1]}Ö¡")
-            print(f"     - ±³¾°ÑÚÂëÎŞĞ§: {torch.sum(background_mask > 0).item()}¸ö·ÇÁãÏñËØ")
-            print(f"     - Íø¸ñ´óĞ¡: {args.grid_size}")
+            print(f"  ??  è­¦å‘Š: æ—¶é—´ç»´åº¦ä¸º0ï¼Œå¯èƒ½åŸå› :")
+            print(f"     - è§†é¢‘å¸§æ•°ä¸è¶³: {video.shape[1]}å¸§")
+            print(f"     - èƒŒæ™¯æ©ç æ— æ•ˆ: {torch.sum(background_mask > 0).item()}ä¸ªéé›¶åƒç´ ")
+            print(f"     - ç½‘æ ¼å¤§å°: {args.grid_size}")
             background_motion_degree = 0.0
         else:
             background_motion_degree = calculate_motion_degree(pred_tracks, video_width, video_height).item()
         
-        print(f"  ±³¾°ÔË¶¯·ù¶È: {background_motion_degree}")
+        print(f"  èƒŒæ™¯è¿åŠ¨å¹…åº¦: {background_motion_degree}")
         print("-" * 50)
 
-        # ¿ÉÊÓ»¯±³¾°ÔË¶¯¹ì¼£
+        # å¯è§†åŒ–èƒŒæ™¯è¿åŠ¨è½¨è¿¹
         if args.save_visualization and args.vis_tracks:
             vis_bg_tracks_path = os.path.join(args.output_vis_dir, f"bg_tracks_{meta_info['index']}.mp4")
             # Visualizer.visualize() expects video with shape (B,T,C,H,W)
@@ -468,91 +468,121 @@ if __name__ == "__main__":
             # eval subject motion degree
             subject_mask = subject_mask.unsqueeze(0)
             
-            # µ÷ÊÔĞÅÏ¢ - Ö÷Ìå×·×Ù
-            print(f"? Ö÷Ìå×·×Ùµ÷ÊÔ - ÊÓÆµ: {meta_info['index']}")
-            print(f"  Ö÷ÌåÑÚÂëĞÎ×´: {subject_mask.shape}")
-            print(f"  Ö÷ÌåÑÚÂë·ÇÁãÏñËØÊı: {torch.sum(subject_mask > 0).item()}")
-            print(f"  ¼ì²âµ½µÄ¶ÔÏóÊı: {boxes_filt.shape[0]}")
-            print(f"  ÑÚÂëÊıÁ¿: {masks.shape[0] if masks is not None else 0}")
+            # è°ƒè¯•ä¿¡æ¯ - ä¸»ä½“è¿½è¸ª
+            print(f"? ä¸»ä½“è¿½è¸ªè°ƒè¯• - è§†é¢‘: {meta_info['index']}")
+            print(f"  ä¸»ä½“æ©ç å½¢çŠ¶: {subject_mask.shape}")
+            print(f"  ä¸»ä½“æ©ç éé›¶åƒç´ æ•°: {torch.sum(subject_mask > 0).item()}")
+            print(f"  æ£€æµ‹åˆ°çš„å¯¹è±¡æ•°: {boxes_filt.shape[0]}")
+            print(f"  æ©ç æ•°é‡: {masks.shape[0] if masks is not None else 0}")
             
-            pred_tracks, pred_visibility = cotracker_model(
-                video,
-                grid_size=args.grid_size,
-                grid_query_frame=0,
-                backward_tracking=True,
-                segm_mask=subject_mask
-            )
+            # è¯¦ç»†åˆ†ææ©ç çŠ¶æ€
+            if masks is not None:
+                print(f"  åŸå§‹æ©ç åˆ†æ:")
+                for i, mask in enumerate(masks):
+                    mask_nonzero = torch.sum(mask > 0).item()
+                    print(f"    æ©ç  {i}: éé›¶åƒç´ æ•° = {mask_nonzero}, å½¢çŠ¶ = {mask.shape}")
             
-            # µ÷ÊÔÊä³ö
-            print(f"  Ö÷Ìåpred_tracksĞÎ×´: {pred_tracks.shape}")
-            print(f"  Ö÷Ìåpred_visibilityĞÎ×´: {pred_visibility.shape}")
+            # æ£€æŸ¥ä¸»ä½“æ©ç æ˜¯å¦æœ‰æ•ˆï¼ˆéç©ºï¼‰
+            subject_mask_valid = torch.sum(subject_mask > 0).item() > 0
+            print(f"  ä¸»ä½“æ©ç æœ‰æ•ˆæ€§: {subject_mask_valid}")
             
-            # ¼ì²éÊÇ·ñÎª¿Õ»òÒì³£
-            if pred_tracks.shape[2] == 0:
-                print(f"  ??  Ö÷Ìå×·×Ù¾¯¸æ: Ê±¼äÎ¬¶ÈÎª0£¬¿ÉÄÜÔ­Òò:")
-                print(f"     - Ö÷ÌåÑÚÂëÎŞĞ§: {torch.sum(subject_mask > 0).item()}¸ö·ÇÁãÏñËØ")
-                print(f"     - Ö÷ÌåÇøÓòÌ«Ğ¡: ÎŞ·¨Éú³ÉÓĞĞ§¸ú×Ùµã")
-                print(f"     - Íø¸ñ´óĞ¡: {args.grid_size}")
+            if not subject_mask_valid:
+                print(f"  ğŸ” æ©ç æ— æ•ˆåŸå› åˆ†æ:")
+                if masks is None:
+                    print(f"    - SAMæœªç”Ÿæˆæ©ç ")
+                elif masks.shape[0] == 0:
+                    print(f"    - SAMç”Ÿæˆçš„æ©ç æ•°é‡ä¸º0")
+                else:
+                    all_masks_empty = all(torch.sum(mask > 0).item() == 0 for mask in masks)
+                    if all_masks_empty:
+                        print(f"    - æ‰€æœ‰SAMæ©ç éƒ½ä¸ºç©º")
+                    else:
+                        print(f"    - torch.any()æ“ä½œåæ©ç å˜ä¸ºç©ºï¼ˆå¯èƒ½æ˜¯æ©ç é‡å é—®é¢˜ï¼‰")
+            
+            if not subject_mask_valid:
+                print(f"  âš ï¸  ä¸»ä½“æ©ç ä¸ºç©ºï¼Œè·³è¿‡ä¸»ä½“è¿åŠ¨åˆ†æ")
                 subject_motion_degree = 0.0
+                # ä¿å­˜è¯¦ç»†çš„è¿åŠ¨åˆ†æ•°ï¼ˆæ— æœ‰æ•ˆä¸»ä½“æ©ç ï¼‰
+                save_detailed_motion_scores(meta_info, background_motion_degree, subject_motion_degree, False)
             else:
-                subject_motion_degree = calculate_motion_degree(pred_tracks, video_width, video_height).item()
+                pred_tracks, pred_visibility = cotracker_model(
+                    video,
+                    grid_size=args.grid_size,
+                    grid_query_frame=0,
+                    backward_tracking=True,
+                    segm_mask=subject_mask
+                )
+                
+                # è°ƒè¯•è¾“å‡º
+                print(f"  ä¸»ä½“pred_trackså½¢çŠ¶: {pred_tracks.shape}")
+                print(f"  ä¸»ä½“pred_visibilityå½¢çŠ¶: {pred_visibility.shape}")
+                
+                # æ£€æŸ¥æ˜¯å¦ä¸ºç©ºæˆ–å¼‚å¸¸
+                if pred_tracks.shape[2] == 0:
+                    print(f"  ??  ä¸»ä½“è¿½è¸ªè­¦å‘Š: æ—¶é—´ç»´åº¦ä¸º0ï¼Œå¯èƒ½åŸå› :")
+                    print(f"     - ä¸»ä½“æ©ç æ— æ•ˆ: {torch.sum(subject_mask > 0).item()}ä¸ªéé›¶åƒç´ ")
+                    print(f"     - ä¸»ä½“åŒºåŸŸå¤ªå°: æ— æ³•ç”Ÿæˆæœ‰æ•ˆè·Ÿè¸ªç‚¹")
+                    print(f"     - ç½‘æ ¼å¤§å°: {args.grid_size}")
+                    subject_motion_degree = 0.0
+                else:
+                    subject_motion_degree = calculate_motion_degree(pred_tracks, video_width, video_height).item()
+                
+                print(f"  ä¸»ä½“è¿åŠ¨å¹…åº¦: {subject_motion_degree}")
+                print("-" * 50)
+
+                # å¯è§†åŒ–ä¸»ä½“è¿åŠ¨è½¨è¿¹ï¼ˆä»…åœ¨æ©ç æœ‰æ•ˆæ—¶ï¼‰
+                if args.save_visualization and args.vis_tracks and subject_mask_valid:
+                    vis_subject_tracks_path = os.path.join(args.output_vis_dir, f"subject_tracks_{meta_info['index']}.mp4")
+                    # Visualizer.visualize() expects video with shape (B,T,C,H,W)
+                    # video is already in shape (B,T,C,H,W) from line 399
+                    visualize_tracks(video, pred_tracks, pred_visibility, vis_subject_tracks_path, args.grid_size)
+
+                # ä¿å­˜è¯¦ç»†çš„è¿åŠ¨åˆ†æ•°
+                save_detailed_motion_scores(meta_info, background_motion_degree, subject_motion_degree, True)
             
-            print(f"  Ö÷ÌåÔË¶¯·ù¶È: {subject_motion_degree}")
-            print("-" * 50)
-
-            # ¿ÉÊÓ»¯Ö÷ÌåÔË¶¯¹ì¼£
-            if args.save_visualization and args.vis_tracks:
-                vis_subject_tracks_path = os.path.join(args.output_vis_dir, f"subject_tracks_{meta_info['index']}.mp4")
-                # Visualizer.visualize() expects video with shape (B,T,C,H,W)
-                # video is already in shape (B,T,C,H,W) from line 399
-                visualize_tracks(video, pred_tracks, pred_visibility, vis_subject_tracks_path, args.grid_size)
-
-            # ±£´æÏêÏ¸µÄÔË¶¯·ÖÊı
-            save_detailed_motion_scores(meta_info, background_motion_degree, subject_motion_degree, True)
-        
-            # ¿ÉÊÓ»¯ÔË¶¯·ÖÎö
-            if args.save_visualization and args.vis_analysis:
-                vis_analysis_path = os.path.join(args.output_vis_dir, f"motion_analysis_{meta_info['index']}.png")
-                
-                # ĞŞ¸´ÑÚÂëĞÎ×´ÎÊÌâ - È·±£ÊÇ2DÊı×é
-                bg_mask_np = background_mask.cpu().numpy()
-                sub_mask_np = subject_mask.cpu().numpy()
-                
-                # °²È«µØÒÆ³ıËùÓĞ´óĞ¡Îª1µÄÎ¬¶È
-                while len(bg_mask_np.shape) > 2 and 1 in bg_mask_np.shape:
-                    # ÕÒµ½µÚÒ»¸ö´óĞ¡Îª1µÄÎ¬¶È²¢ÒÆ³ı
-                    for i, size in enumerate(bg_mask_np.shape):
-                        if size == 1:
-                            bg_mask_np = np.squeeze(bg_mask_np, axis=i)
-                            break
-                
-                while len(sub_mask_np.shape) > 2 and 1 in sub_mask_np.shape:
-                    # ÕÒµ½µÚÒ»¸ö´óĞ¡Îª1µÄÎ¬¶È²¢ÒÆ³ı
-                    for i, size in enumerate(sub_mask_np.shape):
-                        if size == 1:
-                            sub_mask_np = np.squeeze(sub_mask_np, axis=i)
-                            break
-                
-                # Èç¹ûÈÔÈ»²»ÊÇ2D£¬Ç¿ÖÆreshape
-                if len(bg_mask_np.shape) > 2:
-                    print(f"Warning: bg_mask still has shape {bg_mask_np.shape}, reshaping to 2D")
-                    bg_mask_np = bg_mask_np.reshape(bg_mask_np.shape[-2], bg_mask_np.shape[-1])
-                
-                if len(sub_mask_np.shape) > 2:
-                    print(f"Warning: sub_mask still has shape {sub_mask_np.shape}, reshaping to 2D")
-                    sub_mask_np = sub_mask_np.reshape(sub_mask_np.shape[-2], sub_mask_np.shape[-1])
-                
-                visualize_motion_analysis(image_array, 
-                                        bg_mask_np,
-                                        sub_mask_np,
-                                        background_motion_degree, 
-                                        subject_motion_degree,
-                                        vis_analysis_path)
+                # å¯è§†åŒ–è¿åŠ¨åˆ†æï¼ˆä»…åœ¨æ©ç æœ‰æ•ˆæ—¶ï¼‰
+                if args.save_visualization and args.vis_analysis and subject_mask_valid:
+                    vis_analysis_path = os.path.join(args.output_vis_dir, f"motion_analysis_{meta_info['index']}.png")
+                    
+                    # ä¿®å¤æ©ç å½¢çŠ¶é—®é¢˜ - ç¡®ä¿æ˜¯2Dæ•°ç»„
+                    bg_mask_np = background_mask.cpu().numpy()
+                    sub_mask_np = subject_mask.cpu().numpy()
+                    
+                    # å®‰å…¨åœ°ç§»é™¤æ‰€æœ‰å¤§å°ä¸º1çš„ç»´åº¦
+                    while len(bg_mask_np.shape) > 2 and 1 in bg_mask_np.shape:
+                        # æ‰¾åˆ°ç¬¬ä¸€ä¸ªå¤§å°ä¸º1çš„ç»´åº¦å¹¶ç§»é™¤
+                        for i, size in enumerate(bg_mask_np.shape):
+                            if size == 1:
+                                bg_mask_np = np.squeeze(bg_mask_np, axis=i)
+                                break
+                    
+                    while len(sub_mask_np.shape) > 2 and 1 in sub_mask_np.shape:
+                        # æ‰¾åˆ°ç¬¬ä¸€ä¸ªå¤§å°ä¸º1çš„ç»´åº¦å¹¶ç§»é™¤
+                        for i, size in enumerate(sub_mask_np.shape):
+                            if size == 1:
+                                sub_mask_np = np.squeeze(sub_mask_np, axis=i)
+                                break
+                    
+                    # å¦‚æœä»ç„¶ä¸æ˜¯2Dï¼Œå¼ºåˆ¶reshape
+                    if len(bg_mask_np.shape) > 2:
+                        print(f"Warning: bg_mask still has shape {bg_mask_np.shape}, reshaping to 2D")
+                        bg_mask_np = bg_mask_np.reshape(bg_mask_np.shape[-2], bg_mask_np.shape[-1])
+                    
+                    if len(sub_mask_np.shape) > 2:
+                        print(f"Warning: sub_mask still has shape {sub_mask_np.shape}, reshaping to 2D")
+                        sub_mask_np = sub_mask_np.reshape(sub_mask_np.shape[-2], sub_mask_np.shape[-1])
+                    
+                    visualize_motion_analysis(image_array, 
+                                            bg_mask_np,
+                                            sub_mask_np,
+                                            background_motion_degree, 
+                                            subject_motion_degree,
+                                            vis_analysis_path)
         else:
-            # ±£´æÏêÏ¸µÄÔË¶¯·ÖÊı£¨ÎŞÖ÷Ìå¶ÔÏó£©
+            # ä¿å­˜è¯¦ç»†çš„è¿åŠ¨åˆ†æ•°ï¼ˆæ— ä¸»ä½“å¯¹è±¡ï¼‰
             save_detailed_motion_scores(meta_info, background_motion_degree, 0, False)
 
-        # ÀÛ»ı±£´æ½á¹û - Ã¿¸öÊÓÆµ´¦ÀíÍêºóÁ¢¼´±£´æ£¬±ÜÃâ¸²¸Ç
+        # ç´¯ç§¯ä¿å­˜ç»“æœ - æ¯ä¸ªè§†é¢‘å¤„ç†å®Œåç«‹å³ä¿å­˜ï¼Œé¿å…è¦†ç›–
         with open(args.meta_info_path, 'w') as f:
             json.dump(meta_infos, f, indent=4)
 
