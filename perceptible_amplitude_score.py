@@ -440,147 +440,147 @@ if __name__ == "__main__":
             else:
                 sam_predictor.set_image(image_array)
 
-            # convert boxes into xyxy format
-            size = image_pil.size
-            H, W = size[1], size[0]
-            for i in range(boxes_filt.size(0)):
-                boxes_filt[i] = boxes_filt[i] * torch.Tensor([W, H, W, H])
-                boxes_filt[i][:2] -= boxes_filt[i][2:] / 2
-                boxes_filt[i][2:] += boxes_filt[i][:2]
+                # convert boxes into xyxy format
+                size = image_pil.size
+                H, W = size[1], size[0]
+                for i in range(boxes_filt.size(0)):
+                    boxes_filt[i] = boxes_filt[i] * torch.Tensor([W, H, W, H])
+                    boxes_filt[i][:2] -= boxes_filt[i][2:] / 2
+                    boxes_filt[i][2:] += boxes_filt[i][:2]
 
-            boxes_filt = boxes_filt.cpu()
-            transformed_boxes = sam_predictor.transform.apply_boxes_torch(boxes_filt, image.shape[:2]).to(device)
+                boxes_filt = boxes_filt.cpu()
+                transformed_boxes = sam_predictor.transform.apply_boxes_torch(boxes_filt, image.shape[:2]).to(device)
 
-            # run sam model
-            masks, _, _ = sam_predictor.predict_torch(
-                point_coords = None,
-                point_labels = None,
-                boxes = transformed_boxes.to(device),
-                multimask_output = False,
-            )
+                # run sam model
+                masks, _, _ = sam_predictor.predict_torch(
+                    point_coords = None,
+                    point_labels = None,
+                    boxes = transformed_boxes.to(device),
+                    multimask_output = False,
+                )
 
-            # 可视化分割掩码
-            if args.save_visualization and args.vis_masks:
-                vis_masks_path = os.path.join(args.output_vis_dir, f"masks_{meta_info['index']}.jpg")
-                # SAM returns masks with shape (batch_size, num_masks, H, W), squeeze batch dimension
-                masks_np = masks.cpu().numpy().squeeze(0)  # Remove batch dimension: (num_masks, H, W)
-                visualize_masks(image_array, masks_np, vis_masks_path)
+                # 可视化分割掩码
+                if args.save_visualization and args.vis_masks:
+                    vis_masks_path = os.path.join(args.output_vis_dir, f"masks_{meta_info['index']}.jpg")
+                    # SAM returns masks with shape (batch_size, num_masks, H, W), squeeze batch dimension
+                    masks_np = masks.cpu().numpy().squeeze(0)  # Remove batch dimension: (num_masks, H, W)
+                    visualize_masks(image_array, masks_np, vis_masks_path)
 
-        # load the input video frame by frame
-        video = torch.from_numpy(video).permute(0, 3, 1, 2)[None].float()
-        video_width, video_height = video.shape[-1], video.shape[-2]
-        video = video.to(device)
+            # load the input video frame by frame
+            video = torch.from_numpy(video).permute(0, 3, 1, 2)[None].float()
+            video_width, video_height = video.shape[-1], video.shape[-2]
+            video = video.to(device)
 
-        print(f"DEBUG: Video {meta_info['index']} - boxes_filt.shape: {boxes_filt.shape}")
-        print(f"DEBUG: Video {meta_info['index']} - masks.shape: {masks.shape if 'masks' in locals() else 'No masks'}")
-        print(f"DEBUG: Video {meta_info['index']} - video_height: {video_height}, video_width: {video_width}")
-        
-        if boxes_filt.shape[0] != 0:
-            background_mask = torch.any(~masks, dim=0).to(torch.uint8) * 255
-            print(f"DEBUG: Video {meta_info['index']} - background_mask after any(): {background_mask.shape}")
-        else:
-            background_mask = torch.ones((1, video_height, video_width), dtype=torch.uint8, device=device) * 255
-            print(f"DEBUG: Video {meta_info['index']} - background_mask created with ones: {background_mask.shape}")
+            print(f"DEBUG: Video {meta_info['index']} - boxes_filt.shape: {boxes_filt.shape}")
+            print(f"DEBUG: Video {meta_info['index']} - masks.shape: {masks.shape if 'masks' in locals() else 'No masks'}")
+            print(f"DEBUG: Video {meta_info['index']} - video_height: {video_height}, video_width: {video_width}")
+            
+            if boxes_filt.shape[0] != 0:
+                background_mask = torch.any(~masks, dim=0).to(torch.uint8) * 255
+                print(f"DEBUG: Video {meta_info['index']} - background_mask after any(): {background_mask.shape}")
+            else:
+                background_mask = torch.ones((1, video_height, video_width), dtype=torch.uint8, device=device) * 255
+                print(f"DEBUG: Video {meta_info['index']} - background_mask created with ones: {background_mask.shape}")
 
-        # eval background (camera) motion degree
-        background_mask = background_mask.unsqueeze(0)
-        print(f"DEBUG: Video {meta_info['index']} - background_mask after unsqueeze(0): {background_mask.shape}")
-        pred_tracks, pred_visibility = cotracker_model(
-            video,
-            grid_size=grid_size,
-            grid_query_frame=0,
-            backward_tracking=True,
-            segm_mask=background_mask
-        )
-        
-        background_motion_degree = calculate_motion_degree(pred_tracks, video_width, video_height).item()
-
-        # 可视化背景运动轨迹
-        if args.save_visualization and args.vis_tracks:
-            vis_bg_tracks_path = os.path.join(args.output_vis_dir, f"bg_tracks_{meta_info['index']}.mp4")
-            # Visualizer.visualize() expects video with shape (B,T,C,H,W)
-            # video is already in shape (B,T,C,H,W) from line 399
-            visualize_tracks(video, pred_tracks, pred_visibility, vis_bg_tracks_path, grid_size)
-
-        if boxes_filt.shape[0] != 0:
-            subject_mask = torch.any(masks, dim=0).to(torch.uint8) * 255
-            # eval subject motion degree
-            subject_mask = subject_mask.unsqueeze(0)
+            # eval background (camera) motion degree
+            background_mask = background_mask.unsqueeze(0)
+            print(f"DEBUG: Video {meta_info['index']} - background_mask after unsqueeze(0): {background_mask.shape}")
             pred_tracks, pred_visibility = cotracker_model(
                 video,
                 grid_size=grid_size,
                 grid_query_frame=0,
                 backward_tracking=True,
-                segm_mask=subject_mask
+                segm_mask=background_mask
             )
             
-            subject_motion_degree = calculate_motion_degree(pred_tracks, video_width, video_height).item()
+            background_motion_degree = calculate_motion_degree(pred_tracks, video_width, video_height).item()
 
-            # 可视化主体运动轨迹
+            # 可视化背景运动轨迹
             if args.save_visualization and args.vis_tracks:
-                vis_subject_tracks_path = os.path.join(args.output_vis_dir, f"subject_tracks_{meta_info['index']}.mp4")
+                vis_bg_tracks_path = os.path.join(args.output_vis_dir, f"bg_tracks_{meta_info['index']}.mp4")
                 # Visualizer.visualize() expects video with shape (B,T,C,H,W)
                 # video is already in shape (B,T,C,H,W) from line 399
-                visualize_tracks(video, pred_tracks, pred_visibility, vis_subject_tracks_path, grid_size)
+                visualize_tracks(video, pred_tracks, pred_visibility, vis_bg_tracks_path, grid_size)
 
-            # 保存详细的运动分数
-            save_detailed_motion_scores(meta_info, background_motion_degree, subject_motion_degree, True)
+            if boxes_filt.shape[0] != 0:
+                subject_mask = torch.any(masks, dim=0).to(torch.uint8) * 255
+                # eval subject motion degree
+                subject_mask = subject_mask.unsqueeze(0)
+                pred_tracks, pred_visibility = cotracker_model(
+                    video,
+                    grid_size=grid_size,
+                    grid_query_frame=0,
+                    backward_tracking=True,
+                    segm_mask=subject_mask
+                )
+                
+                subject_motion_degree = calculate_motion_degree(pred_tracks, video_width, video_height).item()
+
+                # 可视化主体运动轨迹
+                if args.save_visualization and args.vis_tracks:
+                    vis_subject_tracks_path = os.path.join(args.output_vis_dir, f"subject_tracks_{meta_info['index']}.mp4")
+                    # Visualizer.visualize() expects video with shape (B,T,C,H,W)
+                    # video is already in shape (B,T,C,H,W) from line 399
+                    visualize_tracks(video, pred_tracks, pred_visibility, vis_subject_tracks_path, grid_size)
+
+                # 保存详细的运动分数
+                save_detailed_motion_scores(meta_info, background_motion_degree, subject_motion_degree, True)
             
-            # 可视化运动分析
-            if args.save_visualization and args.vis_analysis:
-                vis_analysis_path = os.path.join(args.output_vis_dir, f"motion_analysis_{meta_info['index']}.png")
-                
-                # 调试：检查传入参数
-                print(f"DEBUG: Video {meta_info['index']} - image_array shape: {image_array.shape}, dtype: {image_array.dtype}")
-                print(f"DEBUG: Video {meta_info['index']} - background_mask original shape: {background_mask.shape}")
-                print(f"DEBUG: Video {meta_info['index']} - subject_mask original shape: {subject_mask.shape}")
-                
-                # 检查掩码的原始形状
-                bg_mask_original = background_mask.cpu().numpy()
-                sub_mask_original = subject_mask.cpu().numpy()
-                print(f"DEBUG: Video {meta_info['index']} - bg_mask_original shape: {bg_mask_original.shape}")
-                print(f"DEBUG: Video {meta_info['index']} - sub_mask_original shape: {sub_mask_original.shape}")
-                
-                # 修复掩码形状问题 - 确保是2D数组
-                bg_mask_np = background_mask.cpu().numpy()
-                sub_mask_np = subject_mask.cpu().numpy()
-                
-                # 安全地移除所有大小为1的维度
-                while len(bg_mask_np.shape) > 2 and 1 in bg_mask_np.shape:
-                    # 找到第一个大小为1的维度并移除
-                    for i, size in enumerate(bg_mask_np.shape):
-                        if size == 1:
-                            bg_mask_np = np.squeeze(bg_mask_np, axis=i)
-                            break
-                
-                while len(sub_mask_np.shape) > 2 and 1 in sub_mask_np.shape:
-                    # 找到第一个大小为1的维度并移除
-                    for i, size in enumerate(sub_mask_np.shape):
-                        if size == 1:
-                            sub_mask_np = np.squeeze(sub_mask_np, axis=i)
-                            break
-                
-                # 如果仍然不是2D，强制reshape
-                if len(bg_mask_np.shape) > 2:
-                    print(f"Warning: bg_mask still has shape {bg_mask_np.shape}, reshaping to 2D")
-                    bg_mask_np = bg_mask_np.reshape(bg_mask_np.shape[-2], bg_mask_np.shape[-1])
-                
-                if len(sub_mask_np.shape) > 2:
-                    print(f"Warning: sub_mask still has shape {sub_mask_np.shape}, reshaping to 2D")
-                    sub_mask_np = sub_mask_np.reshape(sub_mask_np.shape[-2], sub_mask_np.shape[-1])
-                
-                print(f"DEBUG: Final bg_mask shape: {bg_mask_np.shape}")
-                print(f"DEBUG: Final sub_mask shape: {sub_mask_np.shape}")
-                
-                visualize_motion_analysis(image_array, 
-                                        bg_mask_np,
-                                        sub_mask_np,
-                                        background_motion_degree, 
-                                        subject_motion_degree,
-                                        vis_analysis_path)
-        else:
-            # 保存详细的运动分数（无主体对象）
-            save_detailed_motion_scores(meta_info, background_motion_degree, 0, False)
+                # 可视化运动分析
+                if args.save_visualization and args.vis_analysis:
+                    vis_analysis_path = os.path.join(args.output_vis_dir, f"motion_analysis_{meta_info['index']}.png")
+                    
+                    # 调试：检查传入参数
+                    print(f"DEBUG: Video {meta_info['index']} - image_array shape: {image_array.shape}, dtype: {image_array.dtype}")
+                    print(f"DEBUG: Video {meta_info['index']} - background_mask original shape: {background_mask.shape}")
+                    print(f"DEBUG: Video {meta_info['index']} - subject_mask original shape: {subject_mask.shape}")
+                    
+                    # 检查掩码的原始形状
+                    bg_mask_original = background_mask.cpu().numpy()
+                    sub_mask_original = subject_mask.cpu().numpy()
+                    print(f"DEBUG: Video {meta_info['index']} - bg_mask_original shape: {bg_mask_original.shape}")
+                    print(f"DEBUG: Video {meta_info['index']} - sub_mask_original shape: {sub_mask_original.shape}")
+                    
+                    # 修复掩码形状问题 - 确保是2D数组
+                    bg_mask_np = background_mask.cpu().numpy()
+                    sub_mask_np = subject_mask.cpu().numpy()
+                    
+                    # 安全地移除所有大小为1的维度
+                    while len(bg_mask_np.shape) > 2 and 1 in bg_mask_np.shape:
+                        # 找到第一个大小为1的维度并移除
+                        for i, size in enumerate(bg_mask_np.shape):
+                            if size == 1:
+                                bg_mask_np = np.squeeze(bg_mask_np, axis=i)
+                                break
+                    
+                    while len(sub_mask_np.shape) > 2 and 1 in sub_mask_np.shape:
+                        # 找到第一个大小为1的维度并移除
+                        for i, size in enumerate(sub_mask_np.shape):
+                            if size == 1:
+                                sub_mask_np = np.squeeze(sub_mask_np, axis=i)
+                                break
+                    
+                    # 如果仍然不是2D，强制reshape
+                    if len(bg_mask_np.shape) > 2:
+                        print(f"Warning: bg_mask still has shape {bg_mask_np.shape}, reshaping to 2D")
+                        bg_mask_np = bg_mask_np.reshape(bg_mask_np.shape[-2], bg_mask_np.shape[-1])
+                    
+                    if len(sub_mask_np.shape) > 2:
+                        print(f"Warning: sub_mask still has shape {sub_mask_np.shape}, reshaping to 2D")
+                        sub_mask_np = sub_mask_np.reshape(sub_mask_np.shape[-2], sub_mask_np.shape[-1])
+                    
+                    print(f"DEBUG: Final bg_mask shape: {bg_mask_np.shape}")
+                    print(f"DEBUG: Final sub_mask shape: {sub_mask_np.shape}")
+                    
+                    visualize_motion_analysis(image_array, 
+                                            bg_mask_np,
+                                            sub_mask_np,
+                                            background_motion_degree, 
+                                            subject_motion_degree,
+                                            vis_analysis_path)
+            else:
+                # 保存详细的运动分数（无主体对象）
+                save_detailed_motion_scores(meta_info, background_motion_degree, 0, False)
 
             # 累积保存结果 - 每个视频处理完后立即保存，避免覆盖
             print(f"Video {meta_info['index']} processed. Saving results...")
