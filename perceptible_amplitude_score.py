@@ -137,7 +137,7 @@ def calculate_motion_degree(keypoints, video_width, video_height):
     # Compute the Euclidean distance between adjacent frames
     distances = torch.norm(keypoints[:, 1:] - keypoints[:, :-1], dim=3)  # shape [batch_size, 48, 792]
     
-    # Normalize the distances (divide by the diagonal length)
+    # Normalize the distances by the diagonal length to eliminate resolution effects
     normalized_distances = distances / diagonal
     
     # Sum the normalized distances to get the total normalized motion distance for each keypoint
@@ -275,14 +275,14 @@ def visualize_motion_analysis(image, background_mask, subject_mask,
     plt.close()
 
 
-def save_detailed_motion_scores(meta_info, background_motion, subject_motion, has_subject):
+def save_detailed_motion_scores(meta_info, background_motion, subject_motion, has_subject, video_width=None, video_height=None):
     """保存详细的运动分数"""
     if has_subject:
         pure_subject = max(0, subject_motion - background_motion)
         total_motion = background_motion + subject_motion
         motion_ratio = pure_subject / (background_motion + 1e-8)
         
-        meta_info['perceptible_amplitude_score'] = {
+        motion_score = {
             'background_motion': float(background_motion),
             'subject_motion': float(subject_motion),
             'pure_subject_motion': float(pure_subject),
@@ -290,13 +290,24 @@ def save_detailed_motion_scores(meta_info, background_motion, subject_motion, ha
             'motion_ratio': float(motion_ratio)
         }
     else:
-        meta_info['perceptible_amplitude_score'] = {
+        motion_score = {
             'background_motion': float(background_motion),
             'subject_motion': 0.0,
             'pure_subject_motion': 0.0,
             'total_motion': float(background_motion),
             'motion_ratio': 0.0
         }
+    
+    # Add resolution information for normalization tracking
+    if video_width is not None and video_height is not None:
+        motion_score['video_resolution'] = {
+            'width': int(video_width),
+            'height': int(video_height),
+            'diagonal': float(torch.sqrt(torch.tensor(video_width**2 + video_height**2)).item()),
+            'normalized_to_1080p': True
+        }
+    
+    meta_info['perceptible_amplitude_score'] = motion_score
 
 
 if __name__ == "__main__":
@@ -448,7 +459,7 @@ if __name__ == "__main__":
             
             if not subject_mask_valid:
                 subject_motion_degree = 0.0
-                save_detailed_motion_scores(meta_info, background_motion_degree, subject_motion_degree, False)
+                save_detailed_motion_scores(meta_info, background_motion_degree, subject_motion_degree, False, video_width, video_height)
             else:
                 pred_tracks, pred_visibility = cotracker_model(
                     video,
@@ -467,7 +478,7 @@ if __name__ == "__main__":
                     vis_subject_tracks_path = os.path.join(args.output_vis_dir, f"subject_tracks_{meta_info['index']}.mp4")
                     visualize_tracks(video, pred_tracks, pred_visibility, vis_subject_tracks_path, args.grid_size)
 
-                save_detailed_motion_scores(meta_info, background_motion_degree, subject_motion_degree, True)
+                save_detailed_motion_scores(meta_info, background_motion_degree, subject_motion_degree, True, video_width, video_height)
             
                 if args.save_visualization and args.vis_analysis and subject_mask_valid:
                     vis_analysis_path = os.path.join(args.output_vis_dir, f"motion_analysis_{meta_info['index']}.png")
@@ -500,7 +511,7 @@ if __name__ == "__main__":
                                             subject_motion_degree,
                                             vis_analysis_path)
         else:
-            save_detailed_motion_scores(meta_info, background_motion_degree, 0, False)
+            save_detailed_motion_scores(meta_info, background_motion_degree, 0, False, video_width, video_height)
 
         with open(args.meta_info_path, 'w') as f:
             json.dump(meta_infos, f, indent=4)
