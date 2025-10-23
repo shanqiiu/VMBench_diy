@@ -513,6 +513,12 @@ if __name__ == "__main__":
             # 可视化运动分析
             if args.save_visualization and args.vis_analysis:
                 vis_analysis_path = os.path.join(args.output_vis_dir, f"motion_analysis_{meta_info['index']}.png")
+                
+                # 调试：检查传入参数
+                print(f"DEBUG: image_array shape: {image_array.shape}, dtype: {image_array.dtype}")
+                print(f"DEBUG: background_mask shape: {background_mask.squeeze(0).cpu().numpy().shape}")
+                print(f"DEBUG: subject_mask shape: {subject_mask.squeeze(0).cpu().numpy().shape}")
+                
                 visualize_motion_analysis(image_array, 
                                         background_mask.squeeze(0).cpu().numpy(),
                                         subject_mask.squeeze(0).cpu().numpy(),
