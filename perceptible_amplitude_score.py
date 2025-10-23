@@ -239,16 +239,46 @@ def visualize_motion_analysis(image, background_mask, subject_mask,
     # 原始图像 - 确保图像格式正确
     print(f"Image shape: {image.shape}, dtype: {image.dtype}")
     
-    # 处理图像形状问题
+    # 处理图像形状问题 - 更全面的处理
+    original_shape = image.shape
+    
+    # 情况1: 形状是 (1, H, W) - 移除第一个维度
     if len(image.shape) == 3 and image.shape[0] == 1:
-        # 如果形状是 (1, H, W)，需要添加颜色通道或转换为灰度
-        image = image.squeeze(0)  # 移除第一个维度，变成 (H, W)
-        # 转换为RGB格式
-        if len(image.shape) == 2:
-            image = np.stack([image, image, image], axis=-1)  # (H, W, 3)
-    elif len(image.shape) == 2:
-        # 如果是灰度图像，转换为RGB
+        image = image.squeeze(0)  # 变成 (H, W)
+        print(f"After squeeze: {image.shape}")
+    
+    # 情况2: 形状是 (H, W) - 转换为RGB
+    if len(image.shape) == 2:
         image = np.stack([image, image, image], axis=-1)  # (H, W, 3)
+        print(f"After grayscale to RGB: {image.shape}")
+    
+    # 情况3: 形状是 (H, W, 1) - 扩展为RGB
+    elif len(image.shape) == 3 and image.shape[2] == 1:
+        image = np.repeat(image, 3, axis=2)  # (H, W, 3)
+        print(f"After single channel to RGB: {image.shape}")
+    
+    # 情况4: 形状是 (C, H, W) - 转换为 (H, W, C)
+    elif len(image.shape) == 3 and image.shape[0] in [1, 3]:
+        image = np.transpose(image, (1, 2, 0))  # (H, W, C)
+        print(f"After transpose: {image.shape}")
+        # 如果是单通道，扩展为RGB
+        if image.shape[2] == 1:
+            image = np.repeat(image, 3, axis=2)
+            print(f"After single channel expansion: {image.shape}")
+    
+    # 确保最终形状正确
+    if len(image.shape) != 3 or image.shape[2] != 3:
+        print(f"Warning: Final image shape is {image.shape}, expected (H, W, 3)")
+        # 如果仍然不正确，创建默认图像
+        if len(image.shape) == 2:
+            image = np.stack([image, image, image], axis=-1)
+        elif len(image.shape) == 3 and image.shape[2] == 1:
+            image = np.repeat(image, 3, axis=2)
+        else:
+            # 创建默认的RGB图像
+            h, w = image.shape[:2]
+            image = np.zeros((h, w, 3), dtype=np.uint8)
+            print("Created default RGB image")
     
     # 确保数据类型正确
     if image.dtype != np.uint8:
@@ -256,6 +286,8 @@ def visualize_motion_analysis(image, background_mask, subject_mask,
             image = (image * 255).astype(np.uint8)
         else:
             image = image.astype(np.uint8)
+    
+    print(f"Final image shape: {image.shape}, dtype: {image.dtype}")
     
     axes[0, 0].imshow(image)
     axes[0, 0].set_title('Original Image')
