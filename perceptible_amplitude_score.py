@@ -410,26 +410,35 @@ if __name__ == "__main__":
     with open(args.meta_info_path, 'r') as f:
         meta_infos = json.load(f)
     
+    # 批处理统计
+    total_videos = len(meta_infos)
+    processed_videos = 0
+    failed_videos = []
+    
+    print(f"Starting batch processing of {total_videos} videos...")
+    
     for meta_info in tqdm(meta_infos, desc="Motion Degree: Grounded SAM Segmentation"):
-        image_pil, image, image_array, video = load_video(meta_info['filepath'])
+        try:
+            print(f"\nProcessing video {meta_info['index']} ({processed_videos + 1}/{total_videos})")
+            image_pil, image, image_array, video = load_video(meta_info['filepath'])
 
-        text_prompt = meta_info['subject_noun'] + '.'
+            text_prompt = meta_info['subject_noun'] + '.'
 
-        # run grounding dino model
-        boxes_filt, pred_phrases = get_grounding_output(
-            grounding_model, image, text_prompt, box_threshold, text_threshold, device=device
-        )
+            # run grounding dino model
+            boxes_filt, pred_phrases = get_grounding_output(
+                grounding_model, image, text_prompt, box_threshold, text_threshold, device=device
+            )
 
-        # 可视化检测结果
-        if args.save_visualization and args.vis_detection:
-            vis_detection_path = os.path.join(args.output_vis_dir, f"detection_{meta_info['index']}.jpg")
-            visualize_detection(image_array, boxes_filt, pred_phrases, vis_detection_path)
+            # 可视化检测结果
+            if args.save_visualization and args.vis_detection:
+                vis_detection_path = os.path.join(args.output_vis_dir, f"detection_{meta_info['index']}.jpg")
+                visualize_detection(image_array, boxes_filt, pred_phrases, vis_detection_path)
 
-        # no detect object
-        if boxes_filt.shape[0] == 0:
-            print(f"can not detect {text_prompt} in {meta_info['prompt']}")
-        else:
-            sam_predictor.set_image(image_array)
+            # no detect object
+            if boxes_filt.shape[0] == 0:
+                print(f"can not detect {text_prompt} in {meta_info['prompt']}")
+            else:
+                sam_predictor.set_image(image_array)
 
             # convert boxes into xyxy format
             size = image_pil.size
@@ -462,13 +471,20 @@ if __name__ == "__main__":
         video_width, video_height = video.shape[-1], video.shape[-2]
         video = video.to(device)
 
+        print(f"DEBUG: Video {meta_info['index']} - boxes_filt.shape: {boxes_filt.shape}")
+        print(f"DEBUG: Video {meta_info['index']} - masks.shape: {masks.shape if 'masks' in locals() else 'No masks'}")
+        print(f"DEBUG: Video {meta_info['index']} - video_height: {video_height}, video_width: {video_width}")
+        
         if boxes_filt.shape[0] != 0:
             background_mask = torch.any(~masks, dim=0).to(torch.uint8) * 255
+            print(f"DEBUG: Video {meta_info['index']} - background_mask after any(): {background_mask.shape}")
         else:
             background_mask = torch.ones((1, video_height, video_width), dtype=torch.uint8, device=device) * 255
+            print(f"DEBUG: Video {meta_info['index']} - background_mask created with ones: {background_mask.shape}")
 
         # eval background (camera) motion degree
         background_mask = background_mask.unsqueeze(0)
+        print(f"DEBUG: Video {meta_info['index']} - background_mask after unsqueeze(0): {background_mask.shape}")
         pred_tracks, pred_visibility = cotracker_model(
             video,
             grid_size=grid_size,
@@ -515,19 +531,43 @@ if __name__ == "__main__":
                 vis_analysis_path = os.path.join(args.output_vis_dir, f"motion_analysis_{meta_info['index']}.png")
                 
                 # 调试：检查传入参数
-                print(f"DEBUG: image_array shape: {image_array.shape}, dtype: {image_array.dtype}")
-                print(f"DEBUG: background_mask shape: {background_mask.squeeze(0).cpu().numpy().shape}")
-                print(f"DEBUG: subject_mask shape: {subject_mask.squeeze(0).cpu().numpy().shape}")
+                print(f"DEBUG: Video {meta_info['index']} - image_array shape: {image_array.shape}, dtype: {image_array.dtype}")
+                print(f"DEBUG: Video {meta_info['index']} - background_mask original shape: {background_mask.shape}")
+                print(f"DEBUG: Video {meta_info['index']} - subject_mask original shape: {subject_mask.shape}")
+                
+                # 检查掩码的原始形状
+                bg_mask_original = background_mask.cpu().numpy()
+                sub_mask_original = subject_mask.cpu().numpy()
+                print(f"DEBUG: Video {meta_info['index']} - bg_mask_original shape: {bg_mask_original.shape}")
+                print(f"DEBUG: Video {meta_info['index']} - sub_mask_original shape: {sub_mask_original.shape}")
                 
                 # 修复掩码形状问题 - 确保是2D数组
-                bg_mask_np = background_mask.squeeze(0).cpu().numpy()
-                sub_mask_np = subject_mask.squeeze(0).cpu().numpy()
+                bg_mask_np = background_mask.cpu().numpy()
+                sub_mask_np = subject_mask.cpu().numpy()
                 
-                # 如果仍然有额外的维度，继续squeeze
+                # 安全地移除所有大小为1的维度
+                while len(bg_mask_np.shape) > 2 and 1 in bg_mask_np.shape:
+                    # 找到第一个大小为1的维度并移除
+                    for i, size in enumerate(bg_mask_np.shape):
+                        if size == 1:
+                            bg_mask_np = np.squeeze(bg_mask_np, axis=i)
+                            break
+                
+                while len(sub_mask_np.shape) > 2 and 1 in sub_mask_np.shape:
+                    # 找到第一个大小为1的维度并移除
+                    for i, size in enumerate(sub_mask_np.shape):
+                        if size == 1:
+                            sub_mask_np = np.squeeze(sub_mask_np, axis=i)
+                            break
+                
+                # 如果仍然不是2D，强制reshape
                 if len(bg_mask_np.shape) > 2:
-                    bg_mask_np = bg_mask_np.squeeze()
+                    print(f"Warning: bg_mask still has shape {bg_mask_np.shape}, reshaping to 2D")
+                    bg_mask_np = bg_mask_np.reshape(bg_mask_np.shape[-2], bg_mask_np.shape[-1])
+                
                 if len(sub_mask_np.shape) > 2:
-                    sub_mask_np = sub_mask_np.squeeze()
+                    print(f"Warning: sub_mask still has shape {sub_mask_np.shape}, reshaping to 2D")
+                    sub_mask_np = sub_mask_np.reshape(sub_mask_np.shape[-2], sub_mask_np.shape[-1])
                 
                 print(f"DEBUG: Final bg_mask shape: {bg_mask_np.shape}")
                 print(f"DEBUG: Final sub_mask shape: {sub_mask_np.shape}")
@@ -542,10 +582,39 @@ if __name__ == "__main__":
             # 保存详细的运动分数（无主体对象）
             save_detailed_motion_scores(meta_info, background_motion_degree, 0, False)
 
-        # save meta info per video
-        with open(args.meta_info_path, 'w') as f:
-            json.dump(meta_infos, f, indent=4)
+            # 累积保存结果 - 每个视频处理完后立即保存，避免覆盖
+            print(f"Video {meta_info['index']} processed. Saving results...")
+            with open(args.meta_info_path, 'w') as f:
+                json.dump(meta_infos, f, indent=4)
+            print(f"Results saved for video {meta_info['index']}")
+            
+            processed_videos += 1
+            
+        except Exception as e:
+            print(f"ERROR: Failed to process video {meta_info['index']}: {str(e)}")
+            failed_videos.append({
+                'index': meta_info['index'],
+                'filepath': meta_info.get('filepath', 'Unknown'),
+                'error': str(e)
+            })
+            # 即使出错也要保存当前进度
+            with open(args.meta_info_path, 'w') as f:
+                json.dump(meta_infos, f, indent=4)
+            continue
 
+    # 批处理完成统计
+    print("\n" + "="*50)
     print("PAS evaluation completed!")
+    print(f"Total videos: {total_videos}")
+    print(f"Successfully processed: {processed_videos}")
+    print(f"Failed videos: {len(failed_videos)}")
+    
+    if failed_videos:
+        print("\nFailed videos:")
+        for failed in failed_videos:
+            print(f"  - Video {failed['index']}: {failed['error']}")
+    
     if args.save_visualization:
         print(f"Visualization results saved to: {args.output_vis_dir}")
+    
+    print("="*50)
