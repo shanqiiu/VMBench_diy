@@ -519,9 +519,22 @@ if __name__ == "__main__":
                 print(f"DEBUG: background_mask shape: {background_mask.squeeze(0).cpu().numpy().shape}")
                 print(f"DEBUG: subject_mask shape: {subject_mask.squeeze(0).cpu().numpy().shape}")
                 
+                # 修复掩码形状问题 - 确保是2D数组
+                bg_mask_np = background_mask.squeeze(0).cpu().numpy()
+                sub_mask_np = subject_mask.squeeze(0).cpu().numpy()
+                
+                # 如果仍然有额外的维度，继续squeeze
+                if len(bg_mask_np.shape) > 2:
+                    bg_mask_np = bg_mask_np.squeeze()
+                if len(sub_mask_np.shape) > 2:
+                    sub_mask_np = sub_mask_np.squeeze()
+                
+                print(f"DEBUG: Final bg_mask shape: {bg_mask_np.shape}")
+                print(f"DEBUG: Final sub_mask shape: {sub_mask_np.shape}")
+                
                 visualize_motion_analysis(image_array, 
-                                        background_mask.squeeze(0).cpu().numpy(),
-                                        subject_mask.squeeze(0).cpu().numpy(),
+                                        bg_mask_np,
+                                        sub_mask_np,
                                         background_motion_degree, 
                                         subject_motion_degree,
                                         vis_analysis_path)
