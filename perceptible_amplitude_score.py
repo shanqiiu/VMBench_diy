@@ -420,8 +420,9 @@ if __name__ == "__main__":
         # 可视化背景运动轨迹
         if args.save_visualization and args.vis_tracks:
             vis_bg_tracks_path = os.path.join(args.output_vis_dir, f"bg_tracks_{meta_info['index']}.mp4")
-            visualize_tracks(video.squeeze(0).permute(0, 2, 3, 1).cpu().numpy(), 
-                           pred_tracks, pred_visibility, vis_bg_tracks_path, grid_size)
+            # Visualizer.visualize() expects video with shape (B,T,C,H,W)
+            # video is already in shape (B,T,C,H,W) from line 399
+            visualize_tracks(video, pred_tracks, pred_visibility, vis_bg_tracks_path, grid_size)
 
         if boxes_filt.shape[0] != 0:
             subject_mask = torch.any(masks, dim=0).to(torch.uint8) * 255
@@ -440,8 +441,9 @@ if __name__ == "__main__":
             # 可视化主体运动轨迹
             if args.save_visualization and args.vis_tracks:
                 vis_subject_tracks_path = os.path.join(args.output_vis_dir, f"subject_tracks_{meta_info['index']}.mp4")
-                visualize_tracks(video.squeeze(0).permute(0, 2, 3, 1).cpu().numpy(), 
-                               pred_tracks, pred_visibility, vis_subject_tracks_path, grid_size)
+                # Visualizer.visualize() expects video with shape (B,T,C,H,W)
+                # video is already in shape (B,T,C,H,W) from line 399
+                visualize_tracks(video, pred_tracks, pred_visibility, vis_subject_tracks_path, grid_size)
 
             # 保存详细的运动分数
             save_detailed_motion_scores(meta_info, background_motion_degree, subject_motion_degree, True)
