@@ -236,7 +236,27 @@ def visualize_motion_analysis(image, background_mask, subject_mask,
     """可视化运动分析结果"""
     fig, axes = plt.subplots(2, 2, figsize=(12, 10))
     
-    # 原始图像
+    # 原始图像 - 确保图像格式正确
+    print(f"Image shape: {image.shape}, dtype: {image.dtype}")
+    
+    # 处理图像形状问题
+    if len(image.shape) == 3 and image.shape[0] == 1:
+        # 如果形状是 (1, H, W)，需要添加颜色通道或转换为灰度
+        image = image.squeeze(0)  # 移除第一个维度，变成 (H, W)
+        # 转换为RGB格式
+        if len(image.shape) == 2:
+            image = np.stack([image, image, image], axis=-1)  # (H, W, 3)
+    elif len(image.shape) == 2:
+        # 如果是灰度图像，转换为RGB
+        image = np.stack([image, image, image], axis=-1)  # (H, W, 3)
+    
+    # 确保数据类型正确
+    if image.dtype != np.uint8:
+        if image.max() <= 1.0:
+            image = (image * 255).astype(np.uint8)
+        else:
+            image = image.astype(np.uint8)
+    
     axes[0, 0].imshow(image)
     axes[0, 0].set_title('Original Image')
     axes[0, 0].axis('off')
