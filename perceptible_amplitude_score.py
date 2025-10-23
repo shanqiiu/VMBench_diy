@@ -152,14 +152,22 @@ def calculate_motion_degree(keypoints, video_width, video_height):
 def visualize_detection(image, boxes, labels, output_path):
     """可视化对象检测结果"""
     vis_image = image.copy()
-    for i, (box, label) in enumerate(zip(boxes, labels)):
-        # 绘制边界框
-        x1, y1, x2, y2 = box.int().tolist()
-        cv2.rectangle(vis_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
-        
-        # 绘制标签
-        cv2.putText(vis_image, f"{label}", (x1, y1-10), 
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+    
+    # 检查是否有检测结果
+    if len(boxes) == 0:
+        # 如果没有检测到对象，添加文本说明
+        cv2.putText(vis_image, "No objects detected", (50, 50), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+    else:
+        # 绘制检测到的对象
+        for i, (box, label) in enumerate(zip(boxes, labels)):
+            # 绘制边界框
+            x1, y1, x2, y2 = box.int().tolist()
+            cv2.rectangle(vis_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            
+            # 绘制标签
+            cv2.putText(vis_image, f"{label}", (x1, y1-10), 
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
     
     cv2.imwrite(output_path, cv2.cvtColor(vis_image, cv2.COLOR_RGB2BGR))
     return vis_image
@@ -228,61 +236,7 @@ def visualize_motion_analysis(image, background_mask, subject_mask,
                              background_motion, subject_motion, 
                              output_path):
     """可视化运动分析结果"""
-    fig, axes = plt.subplots(2, 2, figsize=(12, 10))
-    
-    # 原始图像 - 确保图像格式正确
-    print(f"Image shape: {image.shape}, dtype: {image.dtype}")
-    
-    # 处理图像形状问题 - 更全面的处理
-    original_shape = image.shape
-    
-    # 情况1: 形状是 (1, H, W) - 移除第一个维度
-    if len(image.shape) == 3 and image.shape[0] == 1:
-        image = image.squeeze(0)  # 变成 (H, W)
-        print(f"After squeeze: {image.shape}")
-    
-    # 情况2: 形状是 (H, W) - 转换为RGB
-    if len(image.shape) == 2:
-        image = np.stack([image, image, image], axis=-1)  # (H, W, 3)
-        print(f"After grayscale to RGB: {image.shape}")
-    
-    # 情况3: 形状是 (H, W, 1) - 扩展为RGB
-    elif len(image.shape) == 3 and image.shape[2] == 1:
-        image = np.repeat(image, 3, axis=2)  # (H, W, 3)
-        print(f"After single channel to RGB: {image.shape}")
-    
-    # 情况4: 形状是 (C, H, W) - 转换为 (H, W, C)
-    elif len(image.shape) == 3 and image.shape[0] in [1, 3]:
-        image = np.transpose(image, (1, 2, 0))  # (H, W, C)
-        print(f"After transpose: {image.shape}")
-        # 如果是单通道，扩展为RGB
-        if image.shape[2] == 1:
-            image = np.repeat(image, 3, axis=2)
-            print(f"After single channel expansion: {image.shape}")
-    
-    # 确保最终形状正确
-    if len(image.shape) != 3 or image.shape[2] != 3:
-        print(f"Warning: Final image shape is {image.shape}, expected (H, W, 3)")
-        # 如果仍然不正确，创建默认图像
-        if len(image.shape) == 2:
-            image = np.stack([image, image, image], axis=-1)
-        elif len(image.shape) == 3 and image.shape[2] == 1:
-            image = np.repeat(image, 3, axis=2)
-        else:
-            # 创建默认的RGB图像
-            h, w = image.shape[:2]
-            image = np.zeros((h, w, 3), dtype=np.uint8)
-            print("Created default RGB image")
-    
-    # 确保数据类型正确
-    if image.dtype != np.uint8:
-        if image.max() <= 1.0:
-            image = (image * 255).astype(np.uint8)
-        else:
-            image = image.astype(np.uint8)
-    
-    print(f"Final image shape: {image.shape}, dtype: {image.dtype}")
-    
+    fig, axes = plt.subplots(2, 2, figsize=(12, 10))   
     axes[0, 0].imshow(image)
     axes[0, 0].set_title('Original Image')
     axes[0, 0].axis('off')
@@ -414,6 +368,9 @@ if __name__ == "__main__":
             vis_detection_path = os.path.join(args.output_vis_dir, f"detection_{meta_info['index']}.jpg")
             visualize_detection(image_array, boxes_filt, pred_phrases, vis_detection_path)
 
+        # 初始化masks变量，避免未定义错误
+        masks = None
+        
         # no detect object
         if boxes_filt.shape[0] == 0:
             print(f"can not detect {text_prompt} in {meta_info['prompt']}")
@@ -451,7 +408,7 @@ if __name__ == "__main__":
         video_width, video_height = video.shape[-1], video.shape[-2]
         video = video.to(device)
    
-        if boxes_filt.shape[0] != 0:
+        if boxes_filt.shape[0] != 0 and masks is not None:
             background_mask = torch.any(~masks, dim=0).to(torch.uint8) * 255
         else:
             background_mask = torch.ones((1, video_height, video_width), dtype=torch.uint8, device=device) * 255
@@ -475,7 +432,7 @@ if __name__ == "__main__":
             # video is already in shape (B,T,C,H,W) from line 399
             visualize_tracks(video, pred_tracks, pred_visibility, vis_bg_tracks_path, args.grid_size)
 
-        if boxes_filt.shape[0] != 0:
+        if boxes_filt.shape[0] != 0 and masks is not None:
             subject_mask = torch.any(masks, dim=0).to(torch.uint8) * 255
             # eval subject motion degree
             subject_mask = subject_mask.unsqueeze(0)
