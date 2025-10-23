@@ -153,14 +153,14 @@ def calculate_motion_degree(keypoints, video_width, video_height):
 
 
 def visualize_detection(image, boxes, labels, output_path):
-    """å¯è§†åŒ–å¯¹è±¡æ£€æµ‹ç»“æœ"""
+    """¿ÉÊÓ»¯¶ÔÏó¼ì²â½á¹û"""
     vis_image = image.copy()
     for i, (box, label) in enumerate(zip(boxes, labels)):
-        # ç»˜åˆ¶è¾¹ç•Œæ¡†
+        # »æÖÆ±ß½ç¿ò
         x1, y1, x2, y2 = box.int().tolist()
         cv2.rectangle(vis_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
         
-        # ç»˜åˆ¶æ ‡ç­¾
+        # »æÖÆ±êÇ©
         cv2.putText(vis_image, f"{label}", (x1, y1-10), 
                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
     
@@ -169,7 +169,7 @@ def visualize_detection(image, boxes, labels, output_path):
 
 
 def visualize_masks(image, masks, output_path, alpha=0.5):
-    """å¯è§†åŒ–åˆ†å‰²æ©ç """
+    """¿ÉÊÓ»¯·Ö¸îÑÚÂë"""
     vis_image = image.copy()
     colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 0, 255)]
     
@@ -184,11 +184,11 @@ def visualize_masks(image, masks, output_path, alpha=0.5):
 
 
 def visualize_tracks(video, tracks, visibility, output_path, grid_size=30):
-    """å¯è§†åŒ–è¿åŠ¨è½¨è¿¹"""
+    """¿ÉÊÓ»¯ÔË¶¯¹ì¼£"""
     visualizer = Visualizer()
     vis_frames = visualizer.visualize(video, tracks, visibility)
     
-    # ä¿å­˜å¯è§†åŒ–è§†é¢‘
+    # ±£´æ¿ÉÊÓ»¯ÊÓÆµ
     if len(vis_frames) > 0:
         height, width = vis_frames[0].shape[:2]
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
@@ -204,25 +204,25 @@ def visualize_tracks(video, tracks, visibility, output_path, grid_size=30):
 def visualize_motion_analysis(image, background_mask, subject_mask, 
                              background_motion, subject_motion, 
                              output_path):
-    """å¯è§†åŒ–è¿åŠ¨åˆ†æç»“æœ"""
+    """¿ÉÊÓ»¯ÔË¶¯·ÖÎö½á¹û"""
     fig, axes = plt.subplots(2, 2, figsize=(12, 10))
     
-    # åŸå§‹å›¾åƒ
+    # Ô­Ê¼Í¼Ïñ
     axes[0, 0].imshow(image)
     axes[0, 0].set_title('Original Image')
     axes[0, 0].axis('off')
     
-    # èƒŒæ™¯æ©ç 
+    # ±³¾°ÑÚÂë
     axes[0, 1].imshow(background_mask, cmap='gray')
     axes[0, 1].set_title(f'Background Mask\nMotion: {background_motion:.4f}')
     axes[0, 1].axis('off')
     
-    # ä¸»ä½“æ©ç 
+    # Ö÷ÌåÑÚÂë
     axes[1, 0].imshow(subject_mask, cmap='gray')
     axes[1, 0].set_title(f'Subject Mask\nMotion: {subject_motion:.4f}')
     axes[1, 0].axis('off')
     
-    # è¿åŠ¨åˆ†æ
+    # ÔË¶¯·ÖÎö
     motion_data = {
         'Background Motion': background_motion,
         'Subject Motion': subject_motion,
@@ -233,7 +233,7 @@ def visualize_motion_analysis(image, background_mask, subject_mask,
     axes[1, 1].set_title('Motion Analysis')
     axes[1, 1].set_ylabel('Motion Amplitude')
     
-    # æ·»åŠ æ•°å€¼æ ‡ç­¾
+    # Ìí¼ÓÊıÖµ±êÇ©
     for bar, value in zip(bars, motion_data.values()):
         axes[1, 1].text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.001,
                         f'{value:.4f}', ha='center', va='bottom')
@@ -244,7 +244,7 @@ def visualize_motion_analysis(image, background_mask, subject_mask,
 
 
 def save_detailed_motion_scores(meta_info, background_motion, subject_motion, has_subject):
-    """ä¿å­˜è¯¦ç»†çš„è¿åŠ¨åˆ†æ•°"""
+    """±£´æÏêÏ¸µÄÔË¶¯·ÖÊı"""
     if has_subject:
         pure_subject = max(0, subject_motion - background_motion)
         total_motion = background_motion + subject_motion
@@ -275,13 +275,13 @@ if __name__ == "__main__":
             default="person. dog. cat. horse. car. ball. robot. bird. bicycle. motorcycle. surfboard. skateboard. bucket. bat. basketball. " \
               "racket. kitten. puppy. fish. laptop. umbrella. wheelchair. drone. scooter. rollerblades. truck. bus. skier. snowboard. " \
               "sled. kayak. canoe. sailboat. guitar. piano. drum. violin. trumpet. saxophone. clarinet. flute. accordion. telescope. " \
-              "microscope. treadmill. rope. ladder. swing. tugboat. train. mountain")
+              "microscope. treadmill. rope. ladder. swing. tugboat. train.")
     parser.add_argument("--box_threshold", type=float, default=0.3, help="box threshold")
     parser.add_argument("--text_threshold", type=float, default=0.25, help="text threshold")
     parser.add_argument("--grid_size", type=int, default=30, help="Regular grid size")
     parser.add_argument("--device", type=str, default="cuda", help="running on cpu only!, default=False")
     
-    # æ–°å¢å¯è§†åŒ–å‚æ•°
+    # ĞÂÔö¿ÉÊÓ»¯²ÎÊı
     parser.add_argument("--save_visualization", action="store_true", help="Save visualization results")
     parser.add_argument("--output_vis_dir", type=str, default="./vis_results", help="Output directory for visualizations")
     parser.add_argument("--vis_detection", action="store_true", help="Visualize object detection")
@@ -306,7 +306,7 @@ if __name__ == "__main__":
     grid_size = args.grid_size
     device = args.device
 
-    # åˆ›å»ºå¯è§†åŒ–è¾“å‡ºç›®å½•
+    # ´´½¨¿ÉÊÓ»¯Êä³öÄ¿Â¼
     if args.save_visualization:
         os.makedirs(args.output_vis_dir, exist_ok=True)
         print(f"Visualization results will be saved to: {args.output_vis_dir}")
@@ -339,7 +339,7 @@ if __name__ == "__main__":
             grounding_model, image, text_prompt, box_threshold, text_threshold, device=device
         )
 
-        # å¯è§†åŒ–æ£€æµ‹ç»“æœ
+        # ¿ÉÊÓ»¯¼ì²â½á¹û
         if args.save_visualization and args.vis_detection:
             vis_detection_path = os.path.join(args.output_vis_dir, f"detection_{meta_info['index']}.jpg")
             visualize_detection(image_array, boxes_filt, pred_phrases, vis_detection_path)
@@ -369,7 +369,7 @@ if __name__ == "__main__":
                 multimask_output = False,
             )
 
-            # å¯è§†åŒ–åˆ†å‰²æ©ç 
+            # ¿ÉÊÓ»¯·Ö¸îÑÚÂë
             if args.save_visualization and args.vis_masks:
                 vis_masks_path = os.path.join(args.output_vis_dir, f"masks_{meta_info['index']}.jpg")
                 visualize_masks(image_array, masks.cpu().numpy(), vis_masks_path)
@@ -396,7 +396,7 @@ if __name__ == "__main__":
         
         background_motion_degree = calculate_motion_degree(pred_tracks, video_width, video_height).item()
 
-        # å¯è§†åŒ–èƒŒæ™¯è¿åŠ¨è½¨è¿¹
+        # ¿ÉÊÓ»¯±³¾°ÔË¶¯¹ì¼£
         if args.save_visualization and args.vis_tracks:
             vis_bg_tracks_path = os.path.join(args.output_vis_dir, f"bg_tracks_{meta_info['index']}.mp4")
             visualize_tracks(video.squeeze(0).permute(0, 2, 3, 1).cpu().numpy(), 
@@ -416,16 +416,16 @@ if __name__ == "__main__":
             
             subject_motion_degree = calculate_motion_degree(pred_tracks, video_width, video_height).item()
 
-            # å¯è§†åŒ–ä¸»ä½“è¿åŠ¨è½¨è¿¹
+            # ¿ÉÊÓ»¯Ö÷ÌåÔË¶¯¹ì¼£
             if args.save_visualization and args.vis_tracks:
                 vis_subject_tracks_path = os.path.join(args.output_vis_dir, f"subject_tracks_{meta_info['index']}.mp4")
                 visualize_tracks(video.squeeze(0).permute(0, 2, 3, 1).cpu().numpy(), 
                                pred_tracks, pred_visibility, vis_subject_tracks_path, grid_size)
 
-            # ä¿å­˜è¯¦ç»†çš„è¿åŠ¨åˆ†æ•°
+            # ±£´æÏêÏ¸µÄÔË¶¯·ÖÊı
             save_detailed_motion_scores(meta_info, background_motion_degree, subject_motion_degree, True)
             
-            # å¯è§†åŒ–è¿åŠ¨åˆ†æ
+            # ¿ÉÊÓ»¯ÔË¶¯·ÖÎö
             if args.save_visualization and args.vis_analysis:
                 vis_analysis_path = os.path.join(args.output_vis_dir, f"motion_analysis_{meta_info['index']}.png")
                 visualize_motion_analysis(image_array, 
@@ -435,7 +435,7 @@ if __name__ == "__main__":
                                         subject_motion_degree,
                                         vis_analysis_path)
         else:
-            # ä¿å­˜è¯¦ç»†çš„è¿åŠ¨åˆ†æ•°ï¼ˆæ— ä¸»ä½“å¯¹è±¡ï¼‰
+            # ±£´æÏêÏ¸µÄÔË¶¯·ÖÊı£¨ÎŞÖ÷Ìå¶ÔÏó£©
             save_detailed_motion_scores(meta_info, background_motion_degree, 0, False)
 
         # save meta info per video
