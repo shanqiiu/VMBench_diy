@@ -423,6 +423,14 @@ if __name__ == "__main__":
 
         # eval background (camera) motion degree
         background_mask = background_mask.unsqueeze(0)
+        
+        # 调试信息
+        print(f"? 调试信息 - 视频: {meta_info['index']}")
+        print(f"  视频形状: {video.shape}")
+        print(f"  背景掩码形状: {background_mask.shape}")
+        print(f"  背景掩码非零像素数: {torch.sum(background_mask > 0).item()}")
+        print(f"  grid_size: {args.grid_size}")
+        
         pred_tracks, pred_visibility = cotracker_model(
             video,
             grid_size=args.grid_size,
@@ -431,7 +439,22 @@ if __name__ == "__main__":
             segm_mask=background_mask
         )
         
-        background_motion_degree = calculate_motion_degree(pred_tracks, video_width, video_height).item()
+        # 调试输出
+        print(f"  pred_tracks形状: {pred_tracks.shape}")
+        print(f"  pred_visibility形状: {pred_visibility.shape}")
+        
+        # 检查是否为空或异常
+        if pred_tracks.shape[2] == 0:
+            print(f"  ??  警告: 时间维度为0，可能原因:")
+            print(f"     - 视频帧数不足: {video.shape[1]}帧")
+            print(f"     - 背景掩码无效: {torch.sum(background_mask > 0).item()}个非零像素")
+            print(f"     - 网格大小: {args.grid_size}")
+            background_motion_degree = 0.0
+        else:
+            background_motion_degree = calculate_motion_degree(pred_tracks, video_width, video_height).item()
+        
+        print(f"  背景运动幅度: {background_motion_degree}")
+        print("-" * 50)
 
         # 可视化背景运动轨迹
         if args.save_visualization and args.vis_tracks:
