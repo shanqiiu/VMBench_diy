@@ -205,19 +205,29 @@ def visualize_masks(image, masks, output_path, alpha=0.5):
 def visualize_tracks(video, tracks, visibility, output_path, grid_size=30):
     """可视化运动轨迹"""
     visualizer = Visualizer()
-    vis_frames = visualizer.visualize(video, tracks, visibility)
+    vis_frames_tensor = visualizer.visualize(video, tracks, visibility)
     
     # 保存可视化视频
-    if len(vis_frames) > 0:
-        height, width = vis_frames[0].shape[:2]
+    if vis_frames_tensor.numel() > 0:
+        # Convert tensor to numpy array and reshape to (T, H, W, C)
+        vis_frames_np = vis_frames_tensor.squeeze(0).permute(0, 2, 3, 1).cpu().numpy()
+        
+        height, width = vis_frames_np[0].shape[:2]
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
         out = cv2.VideoWriter(output_path, fourcc, 8.0, (width, height))
         
-        for frame in vis_frames:
-            out.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+        for frame in vis_frames_np:
+            # Ensure frame is in correct format for cv2.cvtColor
+            if frame.dtype != np.uint8:
+                frame = frame.astype(np.uint8)
+            # Ensure frame has correct shape (H, W, C)
+            if len(frame.shape) == 3 and frame.shape[2] == 3:
+                out.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+            else:
+                print(f"Warning: Invalid frame shape {frame.shape}, skipping...")
         out.release()
     
-    return vis_frames
+    return vis_frames_tensor
 
 
 def visualize_motion_analysis(image, background_mask, subject_mask, 
