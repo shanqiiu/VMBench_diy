@@ -173,7 +173,26 @@ def visualize_masks(image, masks, output_path, alpha=0.5):
     vis_image = image.copy()
     colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 0, 255)]
     
+    # Debug: print shapes for troubleshooting
+    print(f"Image shape: {image.shape}")
+    print(f"Masks shape: {masks.shape}")
+    
     for i, mask in enumerate(masks):
+        # Ensure mask is 2D boolean array
+        if len(mask.shape) > 2:
+            mask = mask.squeeze()
+        
+        # Convert to boolean if needed
+        if mask.dtype != bool:
+            mask = mask.astype(bool)
+            
+        # Check if mask dimensions match image dimensions
+        if mask.shape != image.shape[:2]:
+            print(f"Warning: Mask {i} shape {mask.shape} doesn't match image shape {image.shape[:2]}")
+            # Resize mask to match image dimensions
+            mask = cv2.resize(mask.astype(np.uint8), (image.shape[1], image.shape[0]), 
+                            interpolation=cv2.INTER_NEAREST).astype(bool)
+        
         color = colors[i % len(colors)]
         colored_mask = np.zeros_like(image)
         colored_mask[mask] = color
@@ -372,7 +391,9 @@ if __name__ == "__main__":
             # 可视化分割掩码
             if args.save_visualization and args.vis_masks:
                 vis_masks_path = os.path.join(args.output_vis_dir, f"masks_{meta_info['index']}.jpg")
-                visualize_masks(image_array, masks.cpu().numpy(), vis_masks_path)
+                # SAM returns masks with shape (batch_size, num_masks, H, W), squeeze batch dimension
+                masks_np = masks.cpu().numpy().squeeze(0)  # Remove batch dimension: (num_masks, H, W)
+                visualize_masks(image_array, masks_np, vis_masks_path)
 
         # load the input video frame by frame
         video = torch.from_numpy(video).permute(0, 3, 1, 2)[None].float()
