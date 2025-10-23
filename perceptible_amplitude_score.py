@@ -118,6 +118,37 @@ def get_grounding_output(model, image, caption, box_threshold, text_threshold, w
     return boxes_filt, pred_phrases
 
 
+def is_mask_suitable_for_tracking(mask, video_width, video_height, grid_size, min_area_ratio=0.001):
+    """
+    检查掩码是否适合进行跟踪
+    
+    Parameters:
+    mask: torch.Tensor, 掩码
+    video_width: int, 视频宽度
+    video_height: int, 视频高度
+    grid_size: int, 网格大小
+    min_area_ratio: float, 最小区域比例
+    
+    Returns:
+    bool: 是否适合跟踪
+    """
+    mask_area = torch.sum(mask > 0).item()
+    total_area = video_width * video_height
+    area_ratio = mask_area / total_area
+    
+    # 检查区域是否足够大
+    if area_ratio < min_area_ratio:
+        return False
+    
+    # 检查区域是否足够生成网格点
+    # 粗略估计：需要至少 (grid_size/2)^2 个像素
+    min_pixels_needed = (grid_size // 2) ** 2
+    if mask_area < min_pixels_needed:
+        return False
+    
+    return True
+
+
 def calculate_motion_degree(keypoints, video_width, video_height):
     """
     Calculate the normalized motion amplitude for each batch sample
@@ -205,34 +236,47 @@ def visualize_masks(image, masks, output_path, alpha=0.5):
 
 def visualize_tracks(video, tracks, visibility, output_path, grid_size=30):
     """可视化运动轨迹"""
-    # 禁用自动保存，我们手动保存到指定路径
-    visualizer = Visualizer(save_dir=None)
-    vis_frames_tensor = visualizer.visualize(video, tracks, visibility, save_video=False)
+    # 检查tracks是否为空或无效
+    if tracks is None or tracks.numel() == 0 or tracks.shape[2] == 0:
+        print(f"Warning: No valid tracks to visualize, skipping {output_path}")
+        return None
     
-    # 保存可视化视频
-    if vis_frames_tensor.numel() > 0:
-        # Convert tensor to numpy array and reshape to (T, H, W, C)
-        if vis_frames_tensor.shape[0] == 1:
-            vis_frames_np = vis_frames_tensor.squeeze(0).permute(0, 2, 3, 1).cpu().numpy()
-        else:
-            vis_frames_np = vis_frames_tensor[0].permute(0, 2, 3, 1).cpu().numpy()
+    try:
+        # 禁用自动保存，我们手动保存到指定路径
+        visualizer = Visualizer(save_dir=None)
+        vis_frames_tensor = visualizer.visualize(video, tracks, visibility, save_video=False)
         
-        height, width = vis_frames_np[0].shape[:2]
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        out = cv2.VideoWriter(output_path, fourcc, 8.0, (width, height))
-        
-        for frame in vis_frames_np:
-            # Ensure frame is in correct format for cv2.cvtColor
-            if frame.dtype != np.uint8:
-                frame = frame.astype(np.uint8)
-            # Ensure frame has correct shape (H, W, C)
-            if len(frame.shape) == 3 and frame.shape[2] == 3:
-                out.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+        # 保存可视化视频
+        if vis_frames_tensor.numel() > 0:
+            # Convert tensor to numpy array and reshape to (T, H, W, C)
+            if vis_frames_tensor.shape[0] == 1:
+                vis_frames_np = vis_frames_tensor.squeeze(0).permute(0, 2, 3, 1).cpu().numpy()
             else:
-                print(f"Warning: Invalid frame shape {frame.shape}, skipping...")
-        out.release()
-    
-    return vis_frames_tensor
+                vis_frames_np = vis_frames_tensor[0].permute(0, 2, 3, 1).cpu().numpy()
+            
+            height, width = vis_frames_np[0].shape[:2]
+            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+            out = cv2.VideoWriter(output_path, fourcc, 8.0, (width, height))
+            
+            for frame in vis_frames_np:
+                # Ensure frame is in correct format for cv2.cvtColor
+                if frame.dtype != np.uint8:
+                    frame = frame.astype(np.uint8)
+                # Ensure frame has correct shape (H, W, C)
+                if len(frame.shape) == 3 and frame.shape[2] == 3:
+                    out.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+                else:
+                    print(f"Warning: Invalid frame shape {frame.shape}, skipping...")
+            out.release()
+        else:
+            print(f"Warning: No frames generated for visualization, skipping {output_path}")
+        
+        return vis_frames_tensor
+        
+    except Exception as e:
+        print(f"Error during track visualization: {e}")
+        print(f"Skipping visualization for {output_path}")
+        return None
 
 
 def visualize_motion_analysis(image, background_mask, subject_mask, 
@@ -447,7 +491,7 @@ if __name__ == "__main__":
         else:
             background_motion_degree = calculate_motion_degree(pred_tracks, video_width, video_height).item()
 
-        if args.save_visualization and args.vis_tracks:
+        if args.save_visualization and args.vis_tracks and pred_tracks.shape[2] > 0:
             vis_bg_tracks_path = os.path.join(args.output_vis_dir, f"bg_tracks_{meta_info['index']}.mp4")
             visualize_tracks(video, pred_tracks, pred_visibility, vis_bg_tracks_path, args.grid_size)
 
@@ -455,9 +499,20 @@ if __name__ == "__main__":
             subject_mask = torch.any(masks, dim=0).to(torch.uint8) * 255
             subject_mask = subject_mask.unsqueeze(0)
             
+            # 检查掩码是否适合跟踪
             subject_mask_valid = torch.sum(subject_mask > 0).item() > 0
+            mask_suitable = is_mask_suitable_for_tracking(subject_mask, video_width, video_height, args.grid_size)
             
             if not subject_mask_valid:
+                subject_motion_degree = 0.0
+                save_detailed_motion_scores(meta_info, background_motion_degree, subject_motion_degree, False, video_width, video_height)
+            elif not mask_suitable:
+                print(f"Warning: Mask unsuitable for tracking in video {meta_info['index']}")
+                mask_area = torch.sum(subject_mask > 0).item()
+                mask_ratio = mask_area / (video_width * video_height)
+                print(f"  Mask area: {mask_area} pixels ({mask_ratio:.4f} of frame)")
+                print(f"  Grid size: {args.grid_size}")
+                print(f"  Mask too small for effective tracking")
                 subject_motion_degree = 0.0
                 save_detailed_motion_scores(meta_info, background_motion_degree, subject_motion_degree, False, video_width, video_height)
             else:
@@ -470,11 +525,22 @@ if __name__ == "__main__":
                 )
                 
                 if pred_tracks.shape[2] == 0:
+                    print(f"Warning: Empty tracks for video {meta_info['index']} despite suitable mask")
+                    mask_area = torch.sum(subject_mask > 0).item()
+                    mask_ratio = mask_area / (video_width * video_height)
+                    print(f"  Mask area: {mask_area} pixels ({mask_ratio:.4f} of frame)")
+                    print(f"  Grid size: {args.grid_size}")
+                    print(f"  Video shape: {video.shape}")
+                    print(f"  Possible causes:")
+                    print(f"    - Insufficient motion in subject region")
+                    print(f"    - Video quality issues (blur, low resolution)")
+                    print(f"    - Subject too static or moving too fast")
+                    print(f"    - Co-Tracker algorithm limitations")
                     subject_motion_degree = 0.0
                 else:
                     subject_motion_degree = calculate_motion_degree(pred_tracks, video_width, video_height).item()
 
-                if args.save_visualization and args.vis_tracks and subject_mask_valid:
+                if args.save_visualization and args.vis_tracks and subject_mask_valid and pred_tracks.shape[2] > 0:
                     vis_subject_tracks_path = os.path.join(args.output_vis_dir, f"subject_tracks_{meta_info['index']}.mp4")
                     visualize_tracks(video, pred_tracks, pred_visibility, vis_subject_tracks_path, args.grid_size)
 
