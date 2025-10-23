@@ -421,15 +421,7 @@ if __name__ == "__main__":
         else:
             background_mask = torch.ones((1, video_height, video_width), dtype=torch.uint8, device=device) * 255
 
-        # eval background (camera) motion degree
         background_mask = background_mask.unsqueeze(0)
-        
-        # 调试信息
-        print(f"? 调试信息 - 视频: {meta_info['index']}")
-        print(f"  视频形状: {video.shape}")
-        print(f"  背景掩码形状: {background_mask.shape}")
-        print(f"  背景掩码非零像素数: {torch.sum(background_mask > 0).item()}")
-        print(f"  grid_size: {args.grid_size}")
         
         pred_tracks, pred_visibility = cotracker_model(
             video,
@@ -439,70 +431,23 @@ if __name__ == "__main__":
             segm_mask=background_mask
         )
         
-        # 调试输出
-        print(f"  pred_tracks形状: {pred_tracks.shape}")
-        print(f"  pred_visibility形状: {pred_visibility.shape}")
-        
-        # 检查是否为空或异常
         if pred_tracks.shape[2] == 0:
-            print(f"  ??  警告: 时间维度为0，可能原因:")
-            print(f"     - 视频帧数不足: {video.shape[1]}帧")
-            print(f"     - 背景掩码无效: {torch.sum(background_mask > 0).item()}个非零像素")
-            print(f"     - 网格大小: {args.grid_size}")
             background_motion_degree = 0.0
         else:
             background_motion_degree = calculate_motion_degree(pred_tracks, video_width, video_height).item()
-        
-        print(f"  背景运动幅度: {background_motion_degree}")
-        print("-" * 50)
 
-        # 可视化背景运动轨迹
         if args.save_visualization and args.vis_tracks:
             vis_bg_tracks_path = os.path.join(args.output_vis_dir, f"bg_tracks_{meta_info['index']}.mp4")
-            # Visualizer.visualize() expects video with shape (B,T,C,H,W)
-            # video is already in shape (B,T,C,H,W) from line 399
             visualize_tracks(video, pred_tracks, pred_visibility, vis_bg_tracks_path, args.grid_size)
 
         if boxes_filt.shape[0] != 0 and masks is not None:
             subject_mask = torch.any(masks, dim=0).to(torch.uint8) * 255
-            # eval subject motion degree
             subject_mask = subject_mask.unsqueeze(0)
             
-            # 调试信息 - 主体追踪
-            print(f"? 主体追踪调试 - 视频: {meta_info['index']}")
-            print(f"  主体掩码形状: {subject_mask.shape}")
-            print(f"  主体掩码非零像素数: {torch.sum(subject_mask > 0).item()}")
-            print(f"  检测到的对象数: {boxes_filt.shape[0]}")
-            print(f"  掩码数量: {masks.shape[0] if masks is not None else 0}")
-            
-            # 详细分析掩码状态
-            if masks is not None:
-                print(f"  原始掩码分析:")
-                for i, mask in enumerate(masks):
-                    mask_nonzero = torch.sum(mask > 0).item()
-                    print(f"    掩码 {i}: 非零像素数 = {mask_nonzero}, 形状 = {mask.shape}")
-            
-            # 检查主体掩码是否有效（非空）
             subject_mask_valid = torch.sum(subject_mask > 0).item() > 0
-            print(f"  主体掩码有效性: {subject_mask_valid}")
             
             if not subject_mask_valid:
-                print(f"  🔍 掩码无效原因分析:")
-                if masks is None:
-                    print(f"    - SAM未生成掩码")
-                elif masks.shape[0] == 0:
-                    print(f"    - SAM生成的掩码数量为0")
-                else:
-                    all_masks_empty = all(torch.sum(mask > 0).item() == 0 for mask in masks)
-                    if all_masks_empty:
-                        print(f"    - 所有SAM掩码都为空")
-                    else:
-                        print(f"    - torch.any()操作后掩码变为空（可能是掩码重叠问题）")
-            
-            if not subject_mask_valid:
-                print(f"  ⚠️  主体掩码为空，跳过主体运动分析")
                 subject_motion_degree = 0.0
-                # 保存详细的运动分数（无有效主体掩码）
                 save_detailed_motion_scores(meta_info, background_motion_degree, subject_motion_degree, False)
             else:
                 pred_tracks, pred_visibility = cotracker_model(
@@ -513,63 +458,39 @@ if __name__ == "__main__":
                     segm_mask=subject_mask
                 )
                 
-                # 调试输出
-                print(f"  主体pred_tracks形状: {pred_tracks.shape}")
-                print(f"  主体pred_visibility形状: {pred_visibility.shape}")
-                
-                # 检查是否为空或异常
                 if pred_tracks.shape[2] == 0:
-                    print(f"  ??  主体追踪警告: 时间维度为0，可能原因:")
-                    print(f"     - 主体掩码无效: {torch.sum(subject_mask > 0).item()}个非零像素")
-                    print(f"     - 主体区域太小: 无法生成有效跟踪点")
-                    print(f"     - 网格大小: {args.grid_size}")
                     subject_motion_degree = 0.0
                 else:
                     subject_motion_degree = calculate_motion_degree(pred_tracks, video_width, video_height).item()
-                
-                print(f"  主体运动幅度: {subject_motion_degree}")
-                print("-" * 50)
 
-                # 可视化主体运动轨迹（仅在掩码有效时）
                 if args.save_visualization and args.vis_tracks and subject_mask_valid:
                     vis_subject_tracks_path = os.path.join(args.output_vis_dir, f"subject_tracks_{meta_info['index']}.mp4")
-                    # Visualizer.visualize() expects video with shape (B,T,C,H,W)
-                    # video is already in shape (B,T,C,H,W) from line 399
                     visualize_tracks(video, pred_tracks, pred_visibility, vis_subject_tracks_path, args.grid_size)
 
-                # 保存详细的运动分数
                 save_detailed_motion_scores(meta_info, background_motion_degree, subject_motion_degree, True)
             
-                # 可视化运动分析（仅在掩码有效时）
                 if args.save_visualization and args.vis_analysis and subject_mask_valid:
                     vis_analysis_path = os.path.join(args.output_vis_dir, f"motion_analysis_{meta_info['index']}.png")
                     
-                    # 修复掩码形状问题 - 确保是2D数组
                     bg_mask_np = background_mask.cpu().numpy()
                     sub_mask_np = subject_mask.cpu().numpy()
                     
-                    # 安全地移除所有大小为1的维度
                     while len(bg_mask_np.shape) > 2 and 1 in bg_mask_np.shape:
-                        # 找到第一个大小为1的维度并移除
                         for i, size in enumerate(bg_mask_np.shape):
                             if size == 1:
                                 bg_mask_np = np.squeeze(bg_mask_np, axis=i)
                                 break
                     
                     while len(sub_mask_np.shape) > 2 and 1 in sub_mask_np.shape:
-                        # 找到第一个大小为1的维度并移除
                         for i, size in enumerate(sub_mask_np.shape):
                             if size == 1:
                                 sub_mask_np = np.squeeze(sub_mask_np, axis=i)
                                 break
                     
-                    # 如果仍然不是2D，强制reshape
                     if len(bg_mask_np.shape) > 2:
-                        print(f"Warning: bg_mask still has shape {bg_mask_np.shape}, reshaping to 2D")
                         bg_mask_np = bg_mask_np.reshape(bg_mask_np.shape[-2], bg_mask_np.shape[-1])
                     
                     if len(sub_mask_np.shape) > 2:
-                        print(f"Warning: sub_mask still has shape {sub_mask_np.shape}, reshaping to 2D")
                         sub_mask_np = sub_mask_np.reshape(sub_mask_np.shape[-2], sub_mask_np.shape[-1])
                     
                     visualize_motion_analysis(image_array, 
@@ -579,10 +500,8 @@ if __name__ == "__main__":
                                             subject_motion_degree,
                                             vis_analysis_path)
         else:
-            # 保存详细的运动分数（无主体对象）
             save_detailed_motion_scores(meta_info, background_motion_degree, 0, False)
 
-        # 累积保存结果 - 每个视频处理完后立即保存，避免覆盖
         with open(args.meta_info_path, 'w') as f:
             json.dump(meta_infos, f, indent=4)
 
