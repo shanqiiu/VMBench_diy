@@ -467,6 +467,14 @@ if __name__ == "__main__":
             subject_mask = torch.any(masks, dim=0).to(torch.uint8) * 255
             # eval subject motion degree
             subject_mask = subject_mask.unsqueeze(0)
+            
+            # 调试信息 - 主体追踪
+            print(f"? 主体追踪调试 - 视频: {meta_info['index']}")
+            print(f"  主体掩码形状: {subject_mask.shape}")
+            print(f"  主体掩码非零像素数: {torch.sum(subject_mask > 0).item()}")
+            print(f"  检测到的对象数: {boxes_filt.shape[0]}")
+            print(f"  掩码数量: {masks.shape[0] if masks is not None else 0}")
+            
             pred_tracks, pred_visibility = cotracker_model(
                 video,
                 grid_size=args.grid_size,
@@ -475,7 +483,22 @@ if __name__ == "__main__":
                 segm_mask=subject_mask
             )
             
-            subject_motion_degree = calculate_motion_degree(pred_tracks, video_width, video_height).item()
+            # 调试输出
+            print(f"  主体pred_tracks形状: {pred_tracks.shape}")
+            print(f"  主体pred_visibility形状: {pred_visibility.shape}")
+            
+            # 检查是否为空或异常
+            if pred_tracks.shape[2] == 0:
+                print(f"  ??  主体追踪警告: 时间维度为0，可能原因:")
+                print(f"     - 主体掩码无效: {torch.sum(subject_mask > 0).item()}个非零像素")
+                print(f"     - 主体区域太小: 无法生成有效跟踪点")
+                print(f"     - 网格大小: {args.grid_size}")
+                subject_motion_degree = 0.0
+            else:
+                subject_motion_degree = calculate_motion_degree(pred_tracks, video_width, video_height).item()
+            
+            print(f"  主体运动幅度: {subject_motion_degree}")
+            print("-" * 50)
 
             # 可视化主体运动轨迹
             if args.save_visualization and args.vis_tracks:
