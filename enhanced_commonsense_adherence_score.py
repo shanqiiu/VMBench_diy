@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-ÔöÇ¿°æ³£Ê¶×ñÑ­ÆÀ·ÖÏµÍ³
-¼¯³É×¢ÒâÁ¦È¨ÖØ¿ÉÊÓ»¯¹¦ÄÜ
+å¢å¼ºç‰ˆå¸¸è¯†éµå¾ªè¯„åˆ†ç³»ç»Ÿ
+é›†æˆæ³¨æ„åŠ›æƒé‡å¯è§†åŒ–åŠŸèƒ½
 """
 
 import sys
@@ -27,7 +27,7 @@ from timm.utils import ModelEma
 
 sys.path.insert(0, os.path.join(os.getcwd(), "VideoMAEv2"))
 
-# µ¼ÈëÔ­ÓĞÄ£¿é
+# å¯¼å…¥åŸæœ‰æ¨¡å—
 import models  # noqa: F401
 import utils
 from dataset import build_dataset
@@ -50,7 +50,7 @@ from cas_attention_visualizer import CASAttentionVisualizer
 
 
 class EnhancedCASScorer:
-    """ÔöÇ¿°æCASÆÀ·ÖÆ÷£¬Ö§³Ö×¢ÒâÁ¦¿ÉÊÓ»¯"""
+    """å¢å¼ºç‰ˆCASè¯„åˆ†å™¨ï¼Œæ”¯æŒæ³¨æ„åŠ›å¯è§†åŒ–"""
     
     def __init__(self, args, model, device):
         self.args = args
@@ -59,22 +59,22 @@ class EnhancedCASScorer:
         self.visualizer = CASAttentionVisualizer(model, device)
         
     def evaluate_with_visualization(self, video_path, save_visualization=True):
-        """´ø¿ÉÊÓ»¯µÄCASÆÀ¹À"""
+        """å¸¦å¯è§†åŒ–çš„CASè¯„ä¼°"""
         
-        # 1. Ö´ĞĞÔ­ÓĞCASÆÀ¹À
+        # 1. æ‰§è¡ŒåŸæœ‰CASè¯„ä¼°
         cas_score = self.original_cas_evaluation(video_path)
         
-        # 2. Èç¹û·ÖÊı½ÏµÍ£¬½øĞĞ¿ÉÊÓ»¯·ÖÎö
+        # 2. å¦‚æœåˆ†æ•°è¾ƒä½ï¼Œè¿›è¡Œå¯è§†åŒ–åˆ†æ
         if cas_score < 0.5 and save_visualization:
-            print(f"¼ì²âµ½µÍCASÆÀ·Ö ({cas_score:.3f})£¬¿ªÊ¼Éú³É×¢ÒâÁ¦¿ÉÊÓ»¯...")
+            print(f"æ£€æµ‹åˆ°ä½CASè¯„åˆ† ({cas_score:.3f})ï¼Œå¼€å§‹ç”Ÿæˆæ³¨æ„åŠ›å¯è§†åŒ–...")
             
-            # ¼ÓÔØÊÓÆµ
+            # åŠ è½½è§†é¢‘
             video_tensor = self.load_video_tensor(video_path)
             
-            # ÌáÈ¡×¢ÒâÁ¦È¨ÖØ
+            # æå–æ³¨æ„åŠ›æƒé‡
             attention_weights, layer_names, outputs = self.visualizer.extract_attention_weights(video_tensor)
             
-            # Éú³É¿ÉÊÓ»¯±¨¸æ
+            # ç”Ÿæˆå¯è§†åŒ–æŠ¥å‘Š
             visualization_results = self.visualizer.generate_attention_report(
                 video_path, cas_score, attention_weights
             )
@@ -92,31 +92,31 @@ class EnhancedCASScorer:
             }
     
     def original_cas_evaluation(self, video_path):
-        """Ô­ÓĞCASÆÀ¹ÀÂß¼­"""
-        # ÕâÀïÊµÏÖÔ­ÓĞµÄCASÆÀ·ÖÂß¼­
-        # ·µ»Ø0-1Ö®¼äµÄÆÀ·Ö
+        """åŸæœ‰CASè¯„ä¼°é€»è¾‘"""
+        # è¿™é‡Œå®ç°åŸæœ‰çš„CASè¯„åˆ†é€»è¾‘
+        # è¿”å›0-1ä¹‹é—´çš„è¯„åˆ†
         pass
     
     def load_video_tensor(self, video_path, num_frames=16, img_size=224):
-        """¼ÓÔØÊÓÆµÎªtensor¸ñÊ½"""
+        """åŠ è½½è§†é¢‘ä¸ºtensoræ ¼å¼"""
         import cv2
         
         cap = cv2.VideoCapture(video_path)
         frames = []
         
-        # ¶ÁÈ¡ÊÓÆµÖ¡
+        # è¯»å–è§†é¢‘å¸§
         frame_count = 0
         while frame_count < num_frames:
             ret, frame = cap.read()
             if not ret:
                 break
             
-            # Ô¤´¦ÀíÖ¡
+            # é¢„å¤„ç†å¸§
             frame = cv2.resize(frame, (img_size, img_size))
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             frame = frame.astype(np.float32) / 255.0
             
-            # ±ê×¼»¯
+            # æ ‡å‡†åŒ–
             mean = np.array([0.485, 0.456, 0.406])
             std = np.array([0.229, 0.224, 0.225])
             frame = (frame - mean) / std
@@ -126,18 +126,18 @@ class EnhancedCASScorer:
         
         cap.release()
         
-        # ×ª»»Îªtensor
+        # è½¬æ¢ä¸ºtensor
         video_tensor = torch.from_numpy(np.array(frames)).permute(3, 0, 1, 2)  # [C, T, H, W]
         video_tensor = video_tensor.unsqueeze(0)  # [1, C, T, H, W]
         
         return video_tensor.to(self.device)
     
     def batch_evaluate_with_visualization(self, video_dir, output_dir='./cas_visualization_results'):
-        """ÅúÁ¿ÆÀ¹À´ø¿ÉÊÓ»¯"""
+        """æ‰¹é‡è¯„ä¼°å¸¦å¯è§†åŒ–"""
         
         os.makedirs(output_dir, exist_ok=True)
         
-        # »ñÈ¡ËùÓĞÊÓÆµÎÄ¼ş
+        # è·å–æ‰€æœ‰è§†é¢‘æ–‡ä»¶
         video_files = []
         for ext in ['.mp4', '.avi', '.mov']:
             video_files.extend(Path(video_dir).glob(f'*{ext}'))
@@ -145,41 +145,41 @@ class EnhancedCASScorer:
         results = []
         
         for video_file in video_files:
-            print(f"´¦ÀíÊÓÆµ: {video_file.name}")
+            print(f"å¤„ç†è§†é¢‘: {video_file.name}")
             
             try:
-                # Ö´ĞĞÆÀ¹À
+                # æ‰§è¡Œè¯„ä¼°
                 result = self.evaluate_with_visualization(str(video_file))
                 result['video_path'] = str(video_file)
                 results.append(result)
                 
-                # ±£´æµ¥¸öÊÓÆµ½á¹û
+                # ä¿å­˜å•ä¸ªè§†é¢‘ç»“æœ
                 video_output_dir = os.path.join(output_dir, video_file.stem)
                 if result['visualization']:
-                    print(f"  ¿ÉÊÓ»¯½á¹û±£´æµ½: {video_output_dir}")
+                    print(f"  å¯è§†åŒ–ç»“æœä¿å­˜åˆ°: {video_output_dir}")
                 
             except Exception as e:
-                print(f"´¦ÀíÊÓÆµ {video_file.name} Ê±³ö´í: {e}")
+                print(f"å¤„ç†è§†é¢‘ {video_file.name} æ—¶å‡ºé”™: {e}")
                 results.append({
                     'video_path': str(video_file),
                     'cas_score': 0.0,
                     'error': str(e)
                 })
         
-        # ±£´æÅúÁ¿½á¹û
+        # ä¿å­˜æ‰¹é‡ç»“æœ
         self.save_batch_results(results, output_dir)
         
         return results
     
     def save_batch_results(self, results, output_dir):
-        """±£´æÅúÁ¿ÆÀ¹À½á¹û"""
+        """ä¿å­˜æ‰¹é‡è¯„ä¼°ç»“æœ"""
         
-        # 1. ±£´æJSON½á¹û
+        # 1. ä¿å­˜JSONç»“æœ
         json_path = os.path.join(output_dir, 'cas_visualization_results.json')
         with open(json_path, 'w', encoding='utf-8') as f:
             json.dump(results, f, indent=2, ensure_ascii=False)
         
-        # 2. ±£´æCSVÕªÒª
+        # 2. ä¿å­˜CSVæ‘˜è¦
         csv_path = os.path.join(output_dir, 'cas_summary.csv')
         with open(csv_path, 'w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
@@ -193,61 +193,61 @@ class EnhancedCASScorer:
                     result.get('error', '')
                 ])
         
-        # 3. Éú³ÉÍ³¼Æ±¨¸æ
+        # 3. ç”Ÿæˆç»Ÿè®¡æŠ¥å‘Š
         self.generate_statistics_report(results, output_dir)
         
-        print(f"ÅúÁ¿ÆÀ¹À½á¹ûÒÑ±£´æµ½: {output_dir}")
+        print(f"æ‰¹é‡è¯„ä¼°ç»“æœå·²ä¿å­˜åˆ°: {output_dir}")
     
     def generate_statistics_report(self, results, output_dir):
-        """Éú³ÉÍ³¼Æ±¨¸æ"""
+        """ç”Ÿæˆç»Ÿè®¡æŠ¥å‘Š"""
         
-        # ¼ÆËãÍ³¼ÆĞÅÏ¢
+        # è®¡ç®—ç»Ÿè®¡ä¿¡æ¯
         scores = [r.get('cas_score', 0.0) for r in results if 'error' not in r]
         low_score_count = sum(1 for s in scores if s < 0.5)
         visualization_count = sum(1 for r in results if r.get('visualization') is not None)
         
         report = f"""
-# CAS×¢ÒâÁ¦¿ÉÊÓ»¯Í³¼Æ±¨¸æ
+# CASæ³¨æ„åŠ›å¯è§†åŒ–ç»Ÿè®¡æŠ¥å‘Š
 
-## »ù±¾Í³¼Æ
-- ×ÜÊÓÆµÊıÁ¿: {len(results)}
-- ³É¹¦´¦Àí: {len(scores)}
-- ´¦ÀíÊ§°Ü: {len(results) - len(scores)}
+## åŸºæœ¬ç»Ÿè®¡
+- æ€»è§†é¢‘æ•°é‡: {len(results)}
+- æˆåŠŸå¤„ç†: {len(scores)}
+- å¤„ç†å¤±è´¥: {len(results) - len(scores)}
 
-## CASÆÀ·ÖÍ³¼Æ
-- Æ½¾ùÆÀ·Ö: {np.mean(scores):.3f}
-- ×îµÍÆÀ·Ö: {np.min(scores):.3f}
-- ×î¸ßÆÀ·Ö: {np.max(scores):.3f}
-- ÆÀ·Ö±ê×¼²î: {np.std(scores):.3f}
+## CASè¯„åˆ†ç»Ÿè®¡
+- å¹³å‡è¯„åˆ†: {np.mean(scores):.3f}
+- æœ€ä½è¯„åˆ†: {np.min(scores):.3f}
+- æœ€é«˜è¯„åˆ†: {np.max(scores):.3f}
+- è¯„åˆ†æ ‡å‡†å·®: {np.std(scores):.3f}
 
-## Òì³£¼ì²â
-- µÍ·ÖÊÓÆµÊıÁ¿ (< 0.5): {low_score_count}
-- Éú³É¿ÉÊÓ»¯ÊıÁ¿: {visualization_count}
-- Òì³£¼ì²âÂÊ: {low_score_count/len(scores)*100:.1f}%
+## å¼‚å¸¸æ£€æµ‹
+- ä½åˆ†è§†é¢‘æ•°é‡ (< 0.5): {low_score_count}
+- ç”Ÿæˆå¯è§†åŒ–æ•°é‡: {visualization_count}
+- å¼‚å¸¸æ£€æµ‹ç‡: {low_score_count/len(scores)*100:.1f}%
 
-## ·ÖÎö½á¹û
+## åˆ†æç»“æœ
 """
         
         if low_score_count > 0:
-            report += f"- ¼ì²âµ½ {low_score_count} ¸öÊÓÆµ´æÔÚ³£Ê¶Î¥·´\n"
-            report += f"- ÒÑÎª {visualization_count} ¸öÊÓÆµÉú³É×¢ÒâÁ¦¿ÉÊÓ»¯\n"
-            report += "- ½¨Òé¼ì²éµÍ·ÖÊÓÆµµÄ×¢ÒâÁ¦ÈÈÁ¦Í¼ÒÔÁË½âÒì³£Ô­Òò\n"
+            report += f"- æ£€æµ‹åˆ° {low_score_count} ä¸ªè§†é¢‘å­˜åœ¨å¸¸è¯†è¿å\n"
+            report += f"- å·²ä¸º {visualization_count} ä¸ªè§†é¢‘ç”Ÿæˆæ³¨æ„åŠ›å¯è§†åŒ–\n"
+            report += "- å»ºè®®æ£€æŸ¥ä½åˆ†è§†é¢‘çš„æ³¨æ„åŠ›çƒ­åŠ›å›¾ä»¥äº†è§£å¼‚å¸¸åŸå› \n"
         else:
-            report += "- ËùÓĞÊÓÆµµÄCASÆÀ·ÖÕı³££¬Î´¼ì²âµ½Ã÷ÏÔÒì³£\n"
+            report += "- æ‰€æœ‰è§†é¢‘çš„CASè¯„åˆ†æ­£å¸¸ï¼Œæœªæ£€æµ‹åˆ°æ˜æ˜¾å¼‚å¸¸\n"
         
-        # ±£´æ±¨¸æ
+        # ä¿å­˜æŠ¥å‘Š
         report_path = os.path.join(output_dir, 'statistics_report.txt')
         with open(report_path, 'w', encoding='utf-8') as f:
             f.write(report)
 
 
 def get_args():
-    """»ñÈ¡ÃüÁîĞĞ²ÎÊı"""
+    """è·å–å‘½ä»¤è¡Œå‚æ•°"""
     parser = argparse.ArgumentParser(
         'Enhanced VideoMAE CAS evaluation with attention visualization',
         add_help=False)
     
-    # Ô­ÓĞ²ÎÊı
+    # åŸæœ‰å‚æ•°
     parser.add_argument('--batch_size', default=64, type=int)
     parser.add_argument('--model', default='vit_base_patch16_224', type=str)
     parser.add_argument('--input_size', default=224, type=int)
@@ -255,7 +255,7 @@ def get_args():
     parser.add_argument('--tubelet_size', type=int, default=2)
     parser.add_argument('--device', default='cuda', help='device to use')
     
-    # ¿ÉÊÓ»¯Ïà¹Ø²ÎÊı
+    # å¯è§†åŒ–ç›¸å…³å‚æ•°
     parser.add_argument('--enable_visualization', action='store_true', 
                        help='Enable attention visualization')
     parser.add_argument('--visualization_threshold', type=float, default=0.5,
@@ -269,51 +269,51 @@ def get_args():
 
 
 def main():
-    """Ö÷º¯Êı"""
+    """ä¸»å‡½æ•°"""
     args = get_args()
     
-    # ³õÊ¼»¯Éè±¸
+    # åˆå§‹åŒ–è®¾å¤‡
     device = torch.device(args.device)
     
-    # ´´½¨Ä£ĞÍ
+    # åˆ›å»ºæ¨¡å‹
     model = create_model(
         args.model,
         img_size=args.input_size,
         pretrained=False,
-        num_classes=400,  # ¸ù¾İÊµ¼ÊĞèÇóµ÷Õû
+        num_classes=400,  # æ ¹æ®å®é™…éœ€æ±‚è°ƒæ•´
         all_frames=args.num_frames,
         tubelet_size=args.tubelet_size,
     )
     
     model.to(device)
     
-    # ´´½¨ÔöÇ¿°æCASÆÀ·ÖÆ÷
+    # åˆ›å»ºå¢å¼ºç‰ˆCASè¯„åˆ†å™¨
     cas_scorer = EnhancedCASScorer(args, model, device)
     
     if args.video_path:
-        # µ¥ÊÓÆµÆÀ¹À
-        print(f"ÆÀ¹Àµ¥¸öÊÓÆµ: {args.video_path}")
+        # å•è§†é¢‘è¯„ä¼°
+        print(f"è¯„ä¼°å•ä¸ªè§†é¢‘: {args.video_path}")
         result = cas_scorer.evaluate_with_visualization(
             args.video_path, 
             save_visualization=args.enable_visualization
         )
         
-        print(f"CASÆÀ·Ö: {result['cas_score']:.3f}")
+        print(f"CASè¯„åˆ†: {result['cas_score']:.3f}")
         if result['visualization']:
-            print(f"¿ÉÊÓ»¯½á¹ûÒÑ±£´æ")
+            print(f"å¯è§†åŒ–ç»“æœå·²ä¿å­˜")
             
     elif args.video_dir:
-        # ÅúÁ¿ÆÀ¹À
-        print(f"ÅúÁ¿ÆÀ¹ÀÊÓÆµÄ¿Â¼: {args.video_dir}")
+        # æ‰¹é‡è¯„ä¼°
+        print(f"æ‰¹é‡è¯„ä¼°è§†é¢‘ç›®å½•: {args.video_dir}")
         results = cas_scorer.batch_evaluate_with_visualization(
             args.video_dir, 
             output_dir=args.output_dir
         )
         
-        print(f"ÅúÁ¿ÆÀ¹ÀÍê³É£¬¹²´¦Àí {len(results)} ¸öÊÓÆµ")
+        print(f"æ‰¹é‡è¯„ä¼°å®Œæˆï¼Œå…±å¤„ç† {len(results)} ä¸ªè§†é¢‘")
         
     else:
-        print("ÇëÖ¸¶¨ --video_path »ò --video_dir ²ÎÊı")
+        print("è¯·æŒ‡å®š --video_path æˆ– --video_dir å‚æ•°")
 
 
 if __name__ == '__main__':
