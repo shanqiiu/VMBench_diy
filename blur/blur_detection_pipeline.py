@@ -200,12 +200,18 @@ class BlurDetectionPipeline:
             # 计算MSS分数
             mss_score = 1 - len(blur_frames) / len(quality_scores)
             
+            # 转换blur_frames为列表（如果是NumPy数组）
+            if hasattr(blur_frames, 'tolist'):
+                blur_frames_list = blur_frames.tolist()
+            else:
+                blur_frames_list = list(blur_frames)
+            
             return {
-                'mss_score': mss_score,
-                'blur_frames': blur_frames.tolist(),
+                'mss_score': float(mss_score),
+                'blur_frames': blur_frames_list,
                 'quality_scores': quality_scores,
-                'threshold': threshold,
-                'camera_movement': camera_movement
+                'threshold': float(threshold),
+                'camera_movement': float(camera_movement)
             }
             
         except Exception as e:
@@ -451,12 +457,33 @@ class BlurDetectionPipeline:
             'results': results
         }
     
+    def _make_json_serializable(self, obj):
+        """将NumPy/PyTorch类型转换为Python原生类型"""
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.bool_):
+            return bool(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        elif isinstance(obj, (list, tuple)):
+            return [self._make_json_serializable(item) for item in obj]
+        elif isinstance(obj, dict):
+            return {key: self._make_json_serializable(value) for key, value in obj.items()}
+        elif hasattr(obj, 'item'):  # PyTorch tensor
+            return obj.item()
+        else:
+            return obj
+    
     def _save_batch_results(self, results: List[Dict], output_dir: str):
         """保存批量检测结果"""
         # 保存JSON结果
         json_path = os.path.join(output_dir, 'blur_detection_results.json')
+        # 转换数据为JSON可序列化格式
+        serializable_results = self._make_json_serializable(results)
         with open(json_path, 'w', encoding='utf-8') as f:
-            json.dump(results, f, indent=2, ensure_ascii=False)
+            json.dump(serializable_results, f, indent=2, ensure_ascii=False)
         
         # 保存CSV摘要
         csv_path = os.path.join(output_dir, 'blur_detection_summary.csv')
@@ -550,8 +577,10 @@ def main():
         # 保存结果
         os.makedirs(args.output_dir, exist_ok=True)
         result_path = os.path.join(args.output_dir, f"blur_detection_{os.path.basename(args.video_path)}.json")
+        # 转换数据为JSON可序列化格式
+        serializable_result = detector._make_json_serializable(result)
         with open(result_path, 'w', encoding='utf-8') as f:
-            json.dump(result, f, indent=2, ensure_ascii=False)
+            json.dump(serializable_result, f, indent=2, ensure_ascii=False)
         print(f"结果已保存到: {result_path}")
         
     elif args.video_dir:
