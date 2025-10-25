@@ -28,8 +28,8 @@ class BlurVisualization:
         self.output_dir = output_dir
         os.makedirs(output_dir, exist_ok=True)
         
-        # 设置matplotlib中文字体
-        plt.rcParams['font.sans-serif'] = ['SimHei', 'DejaVu Sans']
+        # 设置matplotlib字体（使用默认英文字体）
+        plt.rcParams['font.sans-serif'] = ['DejaVu Sans']
         plt.rcParams['axes.unicode_minus'] = False
         
         # 设置seaborn样式
@@ -61,28 +61,28 @@ class BlurVisualization:
         
         # 绘制质量分数曲线
         frames = list(range(len(quality_scores)))
-        ax1.plot(frames, quality_scores, 'b-', linewidth=2, label='质量分数')
-        ax1.axhline(y=threshold, color='r', linestyle='--', linewidth=2, label=f'检测阈值 ({threshold:.3f})')
+        ax1.plot(frames, quality_scores, 'b-', linewidth=2, label='Quality Score')
+        ax1.axhline(y=threshold, color='r', linestyle='--', linewidth=2, label=f'Detection Threshold ({threshold:.3f})')
         
         # 标记模糊帧
         if blur_frames:
             blur_scores = [quality_scores[i] for i in blur_frames]
-            ax1.scatter(blur_frames, blur_scores, color='red', s=50, zorder=5, label=f'模糊帧 ({len(blur_frames)}个)')
+            ax1.scatter(blur_frames, blur_scores, color='red', s=50, zorder=5, label=f'Blur Frames ({len(blur_frames)})')
         
-        ax1.set_xlabel('帧序号')
-        ax1.set_ylabel('质量分数')
-        ax1.set_title(f'视频质量分数变化 - {os.path.basename(video_path)}')
+        ax1.set_xlabel('Frame Index')
+        ax1.set_ylabel('Quality Score')
+        ax1.set_title(f'Video Quality Score Changes - {os.path.basename(video_path)}')
         ax1.legend()
         ax1.grid(True, alpha=0.3)
         
         # 绘制质量分数分布直方图
         ax2.hist(quality_scores, bins=30, alpha=0.7, color='skyblue', edgecolor='black')
-        ax2.axvline(x=threshold, color='r', linestyle='--', linewidth=2, label=f'检测阈值 ({threshold:.3f})')
-        ax2.axvline(x=np.mean(quality_scores), color='g', linestyle='-', linewidth=2, label=f'平均质量 ({np.mean(quality_scores):.3f})')
+        ax2.axvline(x=threshold, color='r', linestyle='--', linewidth=2, label=f'Detection Threshold ({threshold:.3f})')
+        ax2.axvline(x=np.mean(quality_scores), color='g', linestyle='-', linewidth=2, label=f'Mean Quality ({np.mean(quality_scores):.3f})')
         
-        ax2.set_xlabel('质量分数')
-        ax2.set_ylabel('频次')
-        ax2.set_title('质量分数分布')
+        ax2.set_xlabel('Quality Score')
+        ax2.set_ylabel('Frequency')
+        ax2.set_title('Quality Score Distribution')
         ax2.legend()
         ax2.grid(True, alpha=0.3)
         
@@ -148,7 +148,7 @@ class BlurVisualization:
             
             if frame_idx < len(frames):
                 axes[row, col].imshow(frames[frame_idx])
-                axes[row, col].set_title(f'模糊帧 {frame_idx}')
+                axes[row, col].set_title(f'Blur Frame {frame_idx}')
                 axes[row, col].axis('off')
             else:
                 axes[row, col].axis('off')
@@ -159,7 +159,7 @@ class BlurVisualization:
             col = i % cols
             axes[row, col].axis('off')
         
-        plt.suptitle(f'检测到的模糊帧 - {os.path.basename(video_path)}', fontsize=16)
+        plt.suptitle(f'Detected Blur Frames - {os.path.basename(video_path)}', fontsize=16)
         plt.tight_layout()
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
         plt.close()
@@ -191,42 +191,42 @@ class BlurVisualization:
         
         # 1. 置信度分布
         ax1.hist(confidences, bins=20, alpha=0.7, color='skyblue', edgecolor='black')
-        ax1.set_xlabel('置信度')
-        ax1.set_ylabel('频次')
-        ax1.set_title('模糊检测置信度分布')
+        ax1.set_xlabel('Confidence')
+        ax1.set_ylabel('Frequency')
+        ax1.set_title('Confidence Distribution')
         ax1.grid(True, alpha=0.3)
         
         # 2. 模糊比例分布
         ax2.hist(blur_ratios, bins=20, alpha=0.7, color='lightcoral', edgecolor='black')
-        ax2.set_xlabel('模糊比例')
-        ax2.set_ylabel('频次')
-        ax2.set_title('模糊比例分布')
+        ax2.set_xlabel('Blur Ratio')
+        ax2.set_ylabel('Frequency')
+        ax2.set_title('Blur Ratio Distribution')
         ax2.grid(True, alpha=0.3)
         
         # 3. 置信度 vs 模糊比例散点图
         colors = ['red' if detected else 'blue' for detected in blur_detected]
         ax3.scatter(confidences, blur_ratios, c=colors, alpha=0.6, s=50)
-        ax3.set_xlabel('置信度')
-        ax3.set_ylabel('模糊比例')
-        ax3.set_title('置信度 vs 模糊比例')
+        ax3.set_xlabel('Confidence')
+        ax3.set_ylabel('Blur Ratio')
+        ax3.set_title('Confidence vs Blur Ratio')
         ax3.grid(True, alpha=0.3)
         
         # 添加图例
         from matplotlib.patches import Patch
-        legend_elements = [Patch(facecolor='red', label='检测到模糊'),
-                          Patch(facecolor='blue', label='未检测到模糊')]
+        legend_elements = [Patch(facecolor='red', label='Blur Detected'),
+                          Patch(facecolor='blue', label='No Blur Detected')]
         ax3.legend(handles=legend_elements)
         
         # 4. 检测结果统计饼图
         blur_count = sum(blur_detected)
         no_blur_count = len(blur_detected) - blur_count
         
-        labels = ['检测到模糊', '未检测到模糊']
+        labels = ['Blur Detected', 'No Blur Detected']
         sizes = [blur_count, no_blur_count]
         colors = ['lightcoral', 'lightblue']
         
         ax4.pie(sizes, labels=labels, colors=colors, autopct='%1.1f%%', startangle=90)
-        ax4.set_title('模糊检测结果统计')
+        ax4.set_title('Detection Results Statistics')
         
         plt.tight_layout()
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
@@ -253,7 +253,7 @@ class BlurVisualization:
         fig = plt.figure(figsize=(16, 12))
         
         # 主标题
-        fig.suptitle(f'视频模糊检测报告 - {os.path.basename(result.get("video_path", ""))}', 
+        fig.suptitle(f'Video Blur Detection Report - {os.path.basename(result.get("video_path", ""))}', 
                     fontsize=20, fontweight='bold')
         
         # 创建网格布局
@@ -266,7 +266,7 @@ class BlurVisualization:
         
         # 创建结果指示器
         color = 'red' if blur_detected else 'green'
-        ax1.text(0.5, 0.5, f'检测结果: {"检测到模糊" if blur_detected else "未检测到模糊"}', 
+        ax1.text(0.5, 0.5, f'Result: {"Blur Detected" if blur_detected else "No Blur Detected"}', 
                 ha='center', va='center', fontsize=14, fontweight='bold', 
                 bbox=dict(boxstyle="round,pad=0.3", facecolor=color, alpha=0.3))
         ax1.set_xlim(0, 1)
@@ -275,18 +275,18 @@ class BlurVisualization:
         
         # 2. 置信度显示
         ax2 = fig.add_subplot(gs[0, 1])
-        ax2.bar(['置信度'], [confidence], color='skyblue', alpha=0.7)
-        ax2.set_ylabel('置信度')
+        ax2.bar(['Confidence'], [confidence], color='skyblue', alpha=0.7)
+        ax2.set_ylabel('Confidence')
         ax2.set_ylim(0, 1)
-        ax2.set_title('检测置信度')
+        ax2.set_title('Detection Confidence')
         
         # 3. 模糊严重程度
         ax3 = fig.add_subplot(gs[0, 2])
-        severity = result.get('blur_severity', '未知')
-        severity_colors = {'无模糊': 'green', '轻微模糊': 'yellow', '中等模糊': 'orange', '严重模糊': 'red'}
+        severity = result.get('blur_severity', 'Unknown')
+        severity_colors = {'No Blur': 'green', 'Mild Blur': 'yellow', 'Moderate Blur': 'orange', 'Severe Blur': 'red'}
         color = severity_colors.get(severity, 'gray')
         
-        ax3.text(0.5, 0.5, f'严重程度:\n{severity}', ha='center', va='center', 
+        ax3.text(0.5, 0.5, f'Severity:\n{severity}', ha='center', va='center', 
                 fontsize=12, bbox=dict(boxstyle="round,pad=0.3", facecolor=color, alpha=0.3))
         ax3.set_xlim(0, 1)
         ax3.set_ylim(0, 1)
@@ -295,16 +295,16 @@ class BlurVisualization:
         # 4. 关键指标
         ax4 = fig.add_subplot(gs[1, :])
         metrics = {
-            '模糊比例': result.get('blur_ratio', 0.0),
-            '模糊帧数': result.get('blur_frame_count', 0),
-            '总帧数': result.get('total_frames', 0),
-            '平均质量': result.get('avg_quality', 0.0),
-            '最大质量下降': result.get('max_quality_drop', 0.0)
+            'Blur Ratio': result.get('blur_ratio', 0.0),
+            'Blur Frames': result.get('blur_frame_count', 0),
+            'Total Frames': result.get('total_frames', 0),
+            'Avg Quality': result.get('avg_quality', 0.0),
+            'Max Quality Drop': result.get('max_quality_drop', 0.0)
         }
         
         bars = ax4.bar(metrics.keys(), metrics.values(), color='lightblue', alpha=0.7)
-        ax4.set_ylabel('数值')
-        ax4.set_title('关键检测指标')
+        ax4.set_ylabel('Value')
+        ax4.set_title('Key Detection Metrics')
         ax4.tick_params(axis='x', rotation=45)
         
         # 添加数值标签
@@ -316,11 +316,11 @@ class BlurVisualization:
         ax5 = fig.add_subplot(gs[2, :])
         recommendations = result.get('recommendations', [])
         if recommendations:
-            rec_text = '\n'.join([f'? {rec}' for rec in recommendations])
+            rec_text = '\n'.join([f'• {rec}' for rec in recommendations])
         else:
-            rec_text = '无特殊建议'
+            rec_text = 'No specific recommendations'
         
-        ax5.text(0.05, 0.95, f'改进建议:\n{rec_text}', transform=ax5.transAxes, 
+        ax5.text(0.05, 0.95, f'Recommendations:\n{rec_text}', transform=ax5.transAxes, 
                 fontsize=12, verticalalignment='top', bbox=dict(boxstyle="round,pad=0.5", 
                 facecolor='lightyellow', alpha=0.8))
         ax5.set_xlim(0, 1)
