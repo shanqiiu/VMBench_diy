@@ -1,22 +1,22 @@
 # -*- coding: utf-8 -*-
 """
-ÊÓÆµÄ£ºı¼ì²âÅäÖÃÎÄ¼ş
+è§†é¢‘æ¨¡ç³Šæ£€æµ‹é…ç½®æ–‡ä»¶
 """
 
 import os
 from pathlib import Path
 
 class BlurDetectionConfig:
-    """Ä£ºı¼ì²âÅäÖÃÀà"""
+    """æ¨¡ç³Šæ£€æµ‹é…ç½®ç±»"""
     
     def __init__(self):
-        """³õÊ¼»¯ÅäÖÃ"""
-        # »ù´¡Â·¾¶ÅäÖÃ
+        """åˆå§‹åŒ–é…ç½®"""
+        # åŸºç¡€è·¯å¾„é…ç½®
         self.base_dir = Path(__file__).parent.parent
         self.cache_dir = self.base_dir / ".cache"
-        self.output_dir = self.base_dir / "ÊÓÆµÄ£ºı¼ì²â" / "results"
+        self.output_dir = self.base_dir / "è§†é¢‘æ¨¡ç³Šæ£€æµ‹" / "results"
         
-        # Ä£ĞÍÂ·¾¶ÅäÖÃ
+        # æ¨¡å‹è·¯å¾„é…ç½®
         self.model_paths = {
             'q_align_model': str(self.cache_dir / "q-future" / "one-align"),
             'grounding_dino_config': str(self.base_dir / "Grounded-Segment-Anything" / "GroundingDINO" / "groundingdino" / "config" / "GroundingDINO_SwinB.py"),
@@ -26,20 +26,20 @@ class BlurDetectionConfig:
             'cotracker_checkpoint': str(self.cache_dir / "scaled_offline.pth")
         }
         
-        # ¼ì²â²ÎÊıÅäÖÃ
+        # æ£€æµ‹å‚æ•°é…ç½®
         self.detection_params = {
-            'window_size': 3,  # »¬¶¯´°¿Ú´óĞ¡
+            'window_size': 3,  # æ»‘åŠ¨çª—å£å¤§å°
             'blur_thresholds': {
-                'mild_blur': 0.015,    # ÇáÎ¢Ä£ºıãĞÖµ
-                'moderate_blur': 0.025, # ÖĞµÈÄ£ºıãĞÖµ
-                'severe_blur': 0.04    # ÑÏÖØÄ£ºıãĞÖµ
+                'mild_blur': 0.015,    # è½»å¾®æ¨¡ç³Šé˜ˆå€¼
+                'moderate_blur': 0.025, # ä¸­ç­‰æ¨¡ç³Šé˜ˆå€¼
+                'severe_blur': 0.04    # ä¸¥é‡æ¨¡ç³Šé˜ˆå€¼
             },
-            'confidence_threshold': 0.7,  # ×ÛºÏÖÃĞÅ¶ÈãĞÖµ
-            'min_frames': 10,  # ×îĞ¡Ö¡ÊıÒªÇó
-            'max_frames': 1000  # ×î´óÖ¡ÊıÏŞÖÆ
+            'confidence_threshold': 0.7,  # ç»¼åˆç½®ä¿¡åº¦é˜ˆå€¼
+            'min_frames': 10,  # æœ€å°å¸§æ•°è¦æ±‚
+            'max_frames': 1000  # æœ€å¤§å¸§æ•°é™åˆ¶
         }
         
-        # ¿ÉÊÓ»¯ÅäÖÃ
+        # å¯è§†åŒ–é…ç½®
         self.visualization_params = {
             'figure_size': (15, 10),
             'dpi': 300,
@@ -48,7 +48,7 @@ class BlurDetectionConfig:
             'style': 'whitegrid'
         }
         
-        # Êä³öÅäÖÃ
+        # è¾“å‡ºé…ç½®
         self.output_params = {
             'save_visualizations': True,
             'save_detailed_reports': True,
@@ -56,96 +56,96 @@ class BlurDetectionConfig:
             'save_json_results': True
         }
         
-        # Éè±¸ÅäÖÃ
+        # è®¾å¤‡é…ç½®
         self.device_config = {
             'device': 'cuda:0',
             'batch_size': 1,
             'num_workers': 4
         }
         
-        # È·±£Êä³öÄ¿Â¼´æÔÚ
+        # ç¡®ä¿è¾“å‡ºç›®å½•å­˜åœ¨
         self.output_dir.mkdir(parents=True, exist_ok=True)
     
     def get_model_path(self, model_name: str) -> str:
-        """»ñÈ¡Ä£ĞÍÂ·¾¶"""
+        """è·å–æ¨¡å‹è·¯å¾„"""
         return self.model_paths.get(model_name, "")
     
     def get_detection_param(self, param_name: str):
-        """»ñÈ¡¼ì²â²ÎÊı"""
+        """è·å–æ£€æµ‹å‚æ•°"""
         return self.detection_params.get(param_name)
     
     def get_visualization_param(self, param_name: str):
-        """»ñÈ¡¿ÉÊÓ»¯²ÎÊı"""
+        """è·å–å¯è§†åŒ–å‚æ•°"""
         return self.visualization_params.get(param_name)
     
     def get_output_param(self, param_name: str):
-        """»ñÈ¡Êä³ö²ÎÊı"""
+        """è·å–è¾“å‡ºå‚æ•°"""
         return self.output_params.get(param_name)
     
     def get_device_config(self, config_name: str):
-        """»ñÈ¡Éè±¸ÅäÖÃ"""
+        """è·å–è®¾å¤‡é…ç½®"""
         return self.device_config.get(config_name)
     
     def update_model_path(self, model_name: str, new_path: str):
-        """¸üĞÂÄ£ĞÍÂ·¾¶"""
+        """æ›´æ–°æ¨¡å‹è·¯å¾„"""
         self.model_paths[model_name] = new_path
     
     def update_detection_param(self, param_name: str, new_value):
-        """¸üĞÂ¼ì²â²ÎÊı"""
+        """æ›´æ–°æ£€æµ‹å‚æ•°"""
         self.detection_params[param_name] = new_value
     
     def update_visualization_param(self, param_name: str, new_value):
-        """¸üĞÂ¿ÉÊÓ»¯²ÎÊı"""
+        """æ›´æ–°å¯è§†åŒ–å‚æ•°"""
         self.visualization_params[param_name] = new_value
     
     def update_output_param(self, param_name: str, new_value):
-        """¸üĞÂÊä³ö²ÎÊı"""
+        """æ›´æ–°è¾“å‡ºå‚æ•°"""
         self.output_params[param_name] = new_value
     
     def update_device_config(self, config_name: str, new_value):
-        """¸üĞÂÉè±¸ÅäÖÃ"""
+        """æ›´æ–°è®¾å¤‡é…ç½®"""
         self.device_config[config_name] = new_value
     
     def validate_config(self) -> bool:
-        """ÑéÖ¤ÅäÖÃÊÇ·ñÓĞĞ§"""
-        # ¼ì²é±ØÒªµÄÄ£ĞÍÎÄ¼şÊÇ·ñ´æÔÚ
+        """éªŒè¯é…ç½®æ˜¯å¦æœ‰æ•ˆ"""
+        # æ£€æŸ¥å¿…è¦çš„æ¨¡å‹æ–‡ä»¶æ˜¯å¦å­˜åœ¨
         required_models = ['q_align_model', 'grounding_dino_checkpoint', 'sam_checkpoint', 'cotracker_checkpoint']
         
         for model in required_models:
             model_path = self.get_model_path(model)
             if not os.path.exists(model_path):
-                print(f"¾¯¸æ: Ä£ĞÍÎÄ¼ş²»´æÔÚ - {model}: {model_path}")
+                print(f"è­¦å‘Š: æ¨¡å‹æ–‡ä»¶ä¸å­˜åœ¨ - {model}: {model_path}")
                 return False
         
-        # ¼ì²éÊä³öÄ¿Â¼ÊÇ·ñ¿ÉĞ´
+        # æ£€æŸ¥è¾“å‡ºç›®å½•æ˜¯å¦å¯å†™
         if not os.access(self.output_dir, os.W_OK):
-            print(f"´íÎó: Êä³öÄ¿Â¼²»¿ÉĞ´ - {self.output_dir}")
+            print(f"é”™è¯¯: è¾“å‡ºç›®å½•ä¸å¯å†™ - {self.output_dir}")
             return False
         
         return True
     
     def print_config(self):
-        """´òÓ¡µ±Ç°ÅäÖÃ"""
-        print("=== ÊÓÆµÄ£ºı¼ì²âÅäÖÃ ===")
-        print(f"»ù´¡Ä¿Â¼: {self.base_dir}")
-        print(f"»º´æÄ¿Â¼: {self.cache_dir}")
-        print(f"Êä³öÄ¿Â¼: {self.output_dir}")
-        print("\nÄ£ĞÍÂ·¾¶:")
+        """æ‰“å°å½“å‰é…ç½®"""
+        print("=== è§†é¢‘æ¨¡ç³Šæ£€æµ‹é…ç½® ===")
+        print(f"åŸºç¡€ç›®å½•: {self.base_dir}")
+        print(f"ç¼“å­˜ç›®å½•: {self.cache_dir}")
+        print(f"è¾“å‡ºç›®å½•: {self.output_dir}")
+        print("\næ¨¡å‹è·¯å¾„:")
         for name, path in self.model_paths.items():
             exists = "?" if os.path.exists(path) else "?"
             print(f"  {name}: {path} {exists}")
-        print("\n¼ì²â²ÎÊı:")
+        print("\næ£€æµ‹å‚æ•°:")
         for name, value in self.detection_params.items():
             print(f"  {name}: {value}")
-        print("\nÉè±¸ÅäÖÃ:")
+        print("\nè®¾å¤‡é…ç½®:")
         for name, value in self.device_config.items():
             print(f"  {name}: {value}")
 
 
-# Ä¬ÈÏÅäÖÃÊµÀı
+# é»˜è®¤é…ç½®å®ä¾‹
 default_config = BlurDetectionConfig()
 
-# Ô¤¶¨ÒåÅäÖÃ
+# é¢„å®šä¹‰é…ç½®
 PRESET_CONFIGS = {
     'fast': {
         'window_size': 2,
@@ -165,7 +165,7 @@ PRESET_CONFIGS = {
 }
 
 def get_preset_config(preset_name: str) -> BlurDetectionConfig:
-    """»ñÈ¡Ô¤¶¨ÒåÅäÖÃ"""
+    """è·å–é¢„å®šä¹‰é…ç½®"""
     config = BlurDetectionConfig()
     
     if preset_name in PRESET_CONFIGS:
@@ -176,20 +176,20 @@ def get_preset_config(preset_name: str) -> BlurDetectionConfig:
     return config
 
 def create_custom_config(**kwargs) -> BlurDetectionConfig:
-    """´´½¨×Ô¶¨ÒåÅäÖÃ"""
+    """åˆ›å»ºè‡ªå®šä¹‰é…ç½®"""
     config = BlurDetectionConfig()
     
-    # ¸üĞÂ¼ì²â²ÎÊı
+    # æ›´æ–°æ£€æµ‹å‚æ•°
     if 'detection_params' in kwargs:
         for param, value in kwargs['detection_params'].items():
             config.update_detection_param(param, value)
     
-    # ¸üĞÂÄ£ĞÍÂ·¾¶
+    # æ›´æ–°æ¨¡å‹è·¯å¾„
     if 'model_paths' in kwargs:
         for model, path in kwargs['model_paths'].items():
             config.update_model_path(model, path)
     
-    # ¸üĞÂÉè±¸ÅäÖÃ
+    # æ›´æ–°è®¾å¤‡é…ç½®
     if 'device_config' in kwargs:
         for device_param, value in kwargs['device_config'].items():
             config.update_device_config(device_param, value)
