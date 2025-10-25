@@ -11,6 +11,7 @@ import json
 from pathlib import Path
 from typing import List, Dict
 import time
+import numpy as np
 
 # 添加当前目录到路径
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -56,6 +57,25 @@ class BlurDetectionRunner:
         self.visualizer = BlurVisualization(str(self.config.output_dir / "visualizations"))
         
         print("检测器初始化完成！")
+    
+    def _make_json_serializable(self, obj):
+        """将NumPy/PyTorch类型转换为Python原生类型"""
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.bool_):
+            return bool(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        elif isinstance(obj, (list, tuple)):
+            return [self._make_json_serializable(item) for item in obj]
+        elif isinstance(obj, dict):
+            return {key: self._make_json_serializable(value) for key, value in obj.items()}
+        elif hasattr(obj, 'item'):  # PyTorch tensor
+            return obj.item()
+        else:
+            return obj
     
     def detect_single_video(self, video_path: str, generate_visualization: bool = True) -> Dict:
         """
@@ -162,8 +182,11 @@ class BlurDetectionRunner:
         
         output_path = self.config.output_dir / filename
         
+        # 转换数据为JSON可序列化格式
+        serializable_results = self._make_json_serializable(results)
+        
         with open(output_path, 'w', encoding='utf-8') as f:
-            json.dump(results, f, indent=2, ensure_ascii=False)
+            json.dump(serializable_results, f, indent=2, ensure_ascii=False)
         
         print(f"检测结果已保存到: {output_path}")
         return str(output_path)
