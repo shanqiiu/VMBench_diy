@@ -24,25 +24,39 @@ warnings.filterwarnings("ignore")
 current_dir = os.path.dirname(os.path.abspath(__file__))
 # 获取项目根目录 (blur目录的父目录)
 project_root = os.path.dirname(current_dir)
-# 添加项目根目录到路径
-sys.path.insert(0, project_root)
-sys.path.insert(0, os.path.join(project_root, "Q-Align"))
 
-# 导入VMBench相关模块
-from motion_smoothness_score import QAlignVideoScorer, load_video_sliding_window, set_threshold, get_artifacts_frames
-from perceptible_amplitude_score import (
-    load_video, load_model, get_grounding_output, 
-    calculate_motion_degree, is_mask_suitable_for_tracking
-)
+# 保存原始工作目录
+original_cwd = os.getcwd()
 
-# 导入Co-Tracker
-sys.path.append(os.path.join(project_root, "co-tracker"))
-from cotracker.utils.visualizer import Visualizer, read_video_from_path
-from cotracker.predictor import CoTrackerPredictor
-
-# 导入Grounded-SAM
-sys.path.append(os.path.join(project_root, "Grounded-Segment-Anything"))
-from segment_anything import sam_model_registry, SamPredictor
+try:
+    # 临时切换到项目根目录以便导入
+    os.chdir(project_root)
+    
+    # 添加项目根目录到路径
+    sys.path.insert(0, project_root)
+    sys.path.insert(0, os.path.join(project_root, "Q-Align"))
+    sys.path.append(os.path.join(project_root, "Grounded-Segment-Anything"))
+    sys.path.append(os.path.join(project_root, "Grounded-Segment-Anything", "GroundingDINO"))
+    sys.path.append(os.path.join(project_root, "Grounded-Segment-Anything", "segment_anything"))
+    sys.path.append(os.path.join(project_root, "co-tracker"))
+    
+    # 导入VMBench相关模块
+    from motion_smoothness_score import QAlignVideoScorer, load_video_sliding_window, set_threshold, get_artifacts_frames
+    from perceptible_amplitude_score import (
+        load_video, load_model, get_grounding_output, 
+        calculate_motion_degree, is_mask_suitable_for_tracking
+    )
+    
+    # 导入Co-Tracker
+    from cotracker.utils.visualizer import Visualizer, read_video_from_path
+    from cotracker.predictor import CoTrackerPredictor
+    
+    # 导入Grounded-SAM
+    from segment_anything import sam_model_registry, SamPredictor
+    
+finally:
+    # 恢复原始工作目录
+    os.chdir(original_cwd)
 
 
 class BlurDetectionPipeline:

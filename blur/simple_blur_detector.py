@@ -22,12 +22,24 @@ warnings.filterwarnings("ignore")
 current_dir = os.path.dirname(os.path.abspath(__file__))
 # 获取项目根目录 (blur目录的父目录)
 project_root = os.path.dirname(current_dir)
-# 添加项目根目录到路径
-sys.path.insert(0, project_root)
-sys.path.insert(0, os.path.join(project_root, "Q-Align"))
 
-# 导入VMBench相关模块
-from motion_smoothness_score import QAlignVideoScorer, load_video_sliding_window, set_threshold, get_artifacts_frames
+# 保存原始工作目录
+original_cwd = os.getcwd()
+
+try:
+    # 临时切换到项目根目录以便导入
+    os.chdir(project_root)
+    
+    # 添加项目根目录到路径
+    sys.path.insert(0, project_root)
+    sys.path.insert(0, os.path.join(project_root, "Q-Align"))
+    
+    # 导入VMBench相关模块
+    from motion_smoothness_score import QAlignVideoScorer, load_video_sliding_window, set_threshold, get_artifacts_frames
+    
+finally:
+    # 恢复原始工作目录
+    os.chdir(original_cwd)
 
 
 class SimpleBlurDetector:
